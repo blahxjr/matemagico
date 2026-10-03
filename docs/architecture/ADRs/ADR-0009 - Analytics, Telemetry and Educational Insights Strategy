@@ -1,0 +1,370 @@
+## ADR-0009 - Analytics, Telemetry and Educational Insights Strategy
+
+**Date**: 2026-09-29  
+**Status**: Proposed  
+**Deciders**: Architecture Lead, Product Lead, Analytics Lead, Tech Lead  
+**Affects**: Analytics, Attempts, Study Paths, Question Engine, Championships, Rankings, Badges, Certificates, Apps/Web, Events
+
+---
+
+# 1. Contexto
+
+O MateMágico Champions possui como diferencial estratégico a capacidade de orientar o aprendizado dos alunos através de métricas pedagógicas, evolução de desempenho, rankings, simulados e treinamento adaptativo.
+
+O Documento Mestre define Analytics como uma das etapas centrais do produto e estabelece dashboards, métricas e acompanhamento da evolução como funcionalidades obrigatórias.
+
+Os ADRs anteriores já definiram:
+
+- Modular Monolith
+- Event Bus interno
+- Ownership dos dados
+- Multi-tenant por escola
+- Modelo de domínio
+- Fluxo de autenticação e autorização
+
+Entretanto ainda não existe uma estratégia formal para:
+
+- geração de métricas;
+- dashboards;
+- telemetria;
+- KPIs pedagógicos;
+- observabilidade da plataforma;
+- coleta e processamento de eventos.
+
+Este ADR formaliza essa arquitetura.
+
+## Restrições
+
+- Analytics não pode ser fonte de verdade.
+- Analytics não pode participar de transações críticas.
+- Dashboards devem ser derivados de eventos.
+- Dados devem respeitar isolamento por schoolId.
+- Métricas não podem comprometer performance do fluxo principal.
+- Toda informação analítica deve ser reconstruível.
+
+## Requisitos
+
+- Dashboards para alunos.
+- Dashboards para professores.
+- Dashboards para coordenadores.
+- Dashboards administrativos.
+- Indicadores pedagógicos.
+- Métricas operacionais.
+- Telemetria da plataforma.
+- Base para IA futura.
+
+---
+
+# 2. Decisão
+
+## DECLARAÇÃO DA DECISÃO
+
+Analytics será implementado como um conjunto de projeções derivadas de eventos de domínio consumidos assincronamente.
+
+Nenhum dashboard consultará diretamente tabelas transacionais de alta frequência.
+
+As métricas serão calculadas por consumidores especializados do Event Bus.
+
+---
+
+## 2.1 Arquitetura
+
+```text
+Attempts
+Study Paths
+Mock Exams
+Championships
+Questions
+      |
+      V
+Event Bus
+      |
+      V
+Analytics Consumers
+      |
+      +--------------------+
+      |                    |
+      V                    V
+Metric Projections    Telemetry Store
+      |
+      V
+Dashboards
+2.2 Ownership
+Analytics é proprietário apenas de:
+projeções
+agregações
+métricas
+relatórios
+indicadores
+Analytics não é proprietário de:
+usuários
+tentativas
+simulados
+rankings
+campeonatos
+trilhas
+2.3 Eventos Consumidos
+Learning
+AttemptCompleted
+QuestionAnswered
+StudyPathStarted
+StudyPathCompleted
+Exams
+MockExamStarted
+MockExamCompleted
+Competitions
+ChampionshipCreated
+ChampionshipFinished
+RankingUpdated
+Recognition
+BadgeEarned
+CertificateGenerated
+Platform
+UserRegistered
+UserActivated
+UserLoggedIn
+2.4 Métricas Pedagógicas
+Aprendizagem
+questões respondidas
+taxa de acerto
+taxa de erro
+evolução semanal
+evolução mensal
+tempo médio por questão
+Domínio por tópico
+aritmética
+álgebra
+geometria
+combinatória
+probabilidade
+Cada tópico possuirá:
+mastery score
+confidence score
+tendência
+2.5 Métricas Adaptativas
+O motor adaptativo poderá utilizar:
+histórico de acertos
+velocidade de resolução
+tópicos dominados
+tópicos críticos
+frequência de estudo
+Exemplo:
+Plain Text
+Acerto < 40%
++
+3 sessões consecutivas
+=
+Tópico em risco
+Mostrar mais linhas
+2.6 Dashboards
+Aluno
+Exibir:
+progresso geral
+tópicos fortes
+tópicos fracos
+histórico de simulados
+campeonatos
+ranking atual
+medalhas
+Professor
+Exibir:
+desempenho da turma
+tópicos críticos
+alunos em risco
+evolução semanal
+engajamento
+Coordenador
+Exibir:
+desempenho institucional
+comparação entre turmas
+indicadores por série
+crescimento da participação
+Administrador
+Exibir:
+escolas ativas
+usuários ativos
+retenção
+crescimento
+utilização da plataforma
+2.7 Métricas Operacionais
+Performance
+p50
+p95
+p99
+Para:
+login
+carregamento
+submissão de respostas
+geração de simulados
+Infraestrutura
+CPU
+memória
+banco
+filas
+cache
+Aplicação
+erros
+exceptions
+retries
+falhas de integração
+2.8 Projeções
+StudentProgress
+Responsável por:
+progresso do aluno
+evolução
+métricas de domínio
+TopicMetrics
+Responsável por:
+desempenho por tópico
+acertos
+erros
+dificuldade observada
+SchoolMetrics
+Responsável por:
+indicadores institucionais
+RankingMetrics
+Responsável por:
+evolução competitiva
+participação
+engajamento
+PlatformMetrics
+Responsável por:
+uso geral
+retenção
+crescimento
+2.9 Atualização
+As projeções serão:
+eventualmente consistentes
+reconstruíveis
+versionadas
+Toda projeção deve possuir:
+projectionVersion
+updatedAt
+sourceEventId
+2.10 Observabilidade
+Logs
+Estruturados em JSON.
+Campos mínimos:
+Plain Text
+timestamp
+service
+module
+event
+correlationId
+schoolId (identificador oficial do tenant escolar; omitir somente para evento explicitamente global)
+level
+ 
+Mostrar mais linhas
+Tracing
+Todos os fluxos críticos devem propagar:
+Plain Text
+correlationId
+causationId
+Mostrar mais linhas
+Métricas
+OpenTelemetry será o padrão arquitetural.
+Coletar:
+request duration
+throughput
+errors
+queue lag
+2.11 Ferramentas
+Dashboards
+Selecionado:
+Tremor
+Recharts
+Motivo:
+alinhado ao Documento Mestre
+integração nativa React
+baixo custo operacional
+Telemetria
+Selecionado:
+OpenTelemetry
+Banco Analítico Inicial
+Selecionado:
+PostgreSQL
+Motivo:
+simplicidade operacional
+alinhamento com ADR-0003
+Warehouse dedicado somente quando necessário.
+
+2.12 Baseline transversal de qualidade
+
+Este ADR adota a matriz comum de `ADR-TEMPLATE.md` para todos os cinco niveis: Unit Tests, Integration Tests, Contract Tests, E2E Tests e Load Tests. Responsabilidades por camada: Domain testa invariantes/semantica das metricas; Application testa consumers e casos de uso; Infrastructure testa broker/store/projections; Frontend testa dashboard e filtros; Contract Tests validam eventos e schemaVersion; Load Tests validam throughput, backlog e projection lag.
+
+2.13 Observabilidade e ownership
+
+OpenTelemetry e o padrao neutro de instrumentacao de metricas e traces; structured logs JSON incluem timestamp, service/module, operation/event, outcome, duration e Correlation ID, com redacao de PII. Error Tracking usa a ferramenta ja aprovada no Documento Mestre (Sentry) somente apos revisao de exportacao/retencao; nenhuma ferramenta adicional e introduzida por este ADR. Tracing propaga `traceId`, `correlationId` e `causationId` de ingress/evento a consumer. Platform/Infrastructure owners instrumentam runtime; cada modulo instrumenta os limites de seus consumers; Analytics owner instrumenta freshness/quality das projections. `schoolId` e permitido apenas em logs/traces protegidos e nunca como label de alta cardinalidade de metricas.
+
+Telemetria operacional (latencia, erros, CPU, DB, filas) e separada de analytics educacional (progresso, desempenho, engajamento). Dados de menor, respostas e credenciais nao sao exportados a ferramenta externa; consentimento/base legal, retencao e redaction precisam de aprovacao antes do go-live.
+
+3. Consequências
+Positivas
+dashboards rápidos
+desacoplamento do domínio
+escalabilidade
+suporte à IA futura
+observabilidade completa
+Negativas
+consistência eventual
+necessidade de consumidores
+armazenamento duplicado
+Trade-offs Aceitos
+Trade-off	Aceito Porque	MonitorarProjeções duplicadas	Melhor performance	tamanho das tabelas
+Consistência eventual	Menor acoplamento	lag
+Processamento assíncrono	Escalabilidade	filas
+4. Riscos
+ID	Risco	Severidade	Probabilidade	MitigaçãoR1	Lag elevado	Alta	Média	monitoramento
+R2	Evento perdido	Alta	Baixa	outbox
+R3	Métricas incorretas	Alta	Média	reconciliação
+R4	Vazamento entre escolas	Crítica	Baixa	filtros por schoolId
+R5	Dashboard lento	Média	Média	índices e cache
+5. Alternativas Consideradas
+Consultas Diretas ao Banco Transacional
+Vantagens:
+simples
+Desvantagens:
+escalabilidade ruim
+alto acoplamento
+Rejeitada.
+Data Warehouse Desde o MVP
+Vantagens:
+escalabilidade
+Desvantagens:
+complexidade prematura
+Rejeitada.
+6. Implementação
+Fase 1
+StudentProgress
+TopicMetrics
+Fase 2
+SchoolMetrics
+RankingMetrics
+Fase 3
+PlatformMetrics
+Telemetria completa
+Fase 4
+Insights por IA
+7. ADRs Relacionados
+ADR-0001 Arquitetura Base
+ADR-0002 Module Boundaries
+ADR-0003 Database Strategy
+ADR-0004 Authentication and Authorization
+8. Referências
+Documento Mestre
+Roadmap Etapa 9 Analytics
+ADR-0002
+ADR-0003
+ADR-0004
+9. Aprovação
+Architecture Lead
+Product Lead
+Analytics Lead
+Tech Lead
+10. Reconsideração Futura
+Revisar este ADR quando:
+houver mais de 100 mil alunos;
+analytics migrar para OLAP;
+IA passar a utilizar métricas em tempo real;
+dashboards exigirem atualização instantânea.
+Data de revisão: antes da implementação da Etapa 9 do roadmap.

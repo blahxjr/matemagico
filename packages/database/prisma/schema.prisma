@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  credentials
+}
+
+enum PasswordHashAlgorithm {
+  ARGON2ID
+}
+
+model AuthAccount {
+  authAccountId String              @id
+  userId        String              @unique
+  provider      AuthProvider
+  subject       String
+  credential    PasswordCredential?
+
+  @@unique([provider, subject])
+}
+
+model PasswordCredential {
+  passwordCredentialId String                @id
+  authAccountId        String                @unique
+  encodedHash          String
+  hashAlgorithm        PasswordHashAlgorithm
+  memoryCost           Int
+  timeCost             Int
+  parallelism          Int
+  passwordChangedAt    DateTime
+  authAccount          AuthAccount           @relation(fields: [authAccountId], references: [authAccountId])
+}
+
+model Session {
+  sessionId         String    @id
+  userId            String
+  createdAt         DateTime
+  lastSeenAt        DateTime
+  absoluteExpiresAt DateTime
+  idleExpiresAt     DateTime
+  revokedAt         DateTime?
+  revocationReason  String?
+
+  @@index([userId, revokedAt, absoluteExpiresAt, idleExpiresAt])
+}
+
+enum MembershipState {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+enum RoleScope {
+  SCHOOL
+  GLOBAL
+}
+
+enum RoleCatalogStatus {
+  APPROVED
+  REMOVED
+}
+
+model SchoolMembership {
+  membershipId String          @id
+  userId       String
+  schoolId     String
+  state        MembershipState
+  createdAt    DateTime
+  activatedAt  DateTime?
+  revokedAt    DateTime?
+  grants       Grant[]
+
+  @@index([userId, schoolId, state])
+}
+
+model Role {
+  roleId      String               @id
+  code        String               @unique
+  scope       RoleScope
+  status      RoleCatalogStatus
+  privileged  Boolean
+  permissions RolePermission[]
+  allowlist   RoleGrantAllowlist[]
+  grants      Grant[]
+}
+
+model RolePermission {
+  roleId         String
+  permissionCode String
+  role           Role   @relation(fields: [roleId], references: [roleId])
+
+  @@id([roleId, permissionCode])
+}
+
+model RoleGrantAllowlist {
+  actorUserId String
+  schoolId    String
+  roleId      String
+  role        Role   @relation(fields: [roleId], references: [roleId])
+
+  @@id([actorUserId, schoolId, roleId])
+}
+
+model Grant {
+  grantId      String           @id
+  membershipId String
+  roleId       String
+  schoolId     String
+  grantedBy    String
+  validFrom    DateTime
+  validUntil   DateTime?
+  revokedAt    DateTime?
+  membership   SchoolMembership @relation(fields: [membershipId], references: [membershipId])
+  role         Role             @relation(fields: [roleId], references: [roleId])
+
+  @@index([membershipId, roleId])
+}

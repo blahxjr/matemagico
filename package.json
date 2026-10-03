@@ -1,0 +1,39 @@
+{
+  "name": "matemagico-champions",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.11.0",
+  "description": "Foundation workspace for MateMagico Champions.",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/modules/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "format": "prettier --write package.json turbo.json tsconfig.json .commitlintrc.json .dependency-cruiser.js .lintstagedrc.json .github apps packages docs/setup scripts tests",
+    "format:check": "prettier --check package.json turbo.json tsconfig.json .commitlintrc.json .dependency-cruiser.js .lintstagedrc.json .github apps packages docs/setup scripts tests",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:e2e": "playwright test --config=apps/web/playwright.config.ts",
+    "test:architecture": "dependency-cruiser --validate .dependency-cruiser.js apps packages",
+    "db:generate": "npm run db:generate --workspace @matemagico/database",
+    "db:validate": "npm run db:validate --workspace @matemagico/database",
+    "db:migrate": "npm run db:migrate --workspace @matemagico/database",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@playwright/test": "^1.52.0",
+    "@vitest/coverage-v8": "^3.2.7",
+    "dependency-cruiser": "^16.10.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
+  }
+}
