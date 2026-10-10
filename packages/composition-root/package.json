@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@matemagico/auth": "*",
+    "@matemagico/logger": "*",
     "@matemagico/membership": "*",
     "@prisma/client": "^6.7.0"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "vitest": "^3.0.8"
+    "vitest": "^4.1.11"
   }
 }

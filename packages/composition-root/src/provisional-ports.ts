@@ -1,4 +1,5 @@
 import type { PasswordVerifier, UserRepository } from '@matemagico/auth';
+import { logger } from '@matemagico/logger';
 import type {
   ActorAuthorizer,
   MembershipEventPublisher,
@@ -39,6 +40,26 @@ export const rejectAllPasswordVerifier: PasswordVerifier = {
 
 // TODO(TECH-DEBT: Outbox Pattern): events are discarded until the outbox exists.
 export const discardingEventPublisher: MembershipEventPublisher = {
-  publishMembershipCreated: async () => undefined,
-  publishRoleGranted: async () => undefined,
+  publishMembershipCreated: async (event) => {
+    logger.warn('domain_event.discarded', {
+      module: 'membership',
+      eventName: 'MembershipCreated',
+      aggregateType: 'SchoolMembership',
+      aggregateId: event.membershipId,
+      schoolId: event.schoolId,
+      occurredAt: event.occurredAt.toISOString(),
+      outcome: 'discarded',
+    });
+  },
+  publishRoleGranted: async (event) => {
+    logger.warn('domain_event.discarded', {
+      module: 'membership',
+      eventName: 'RoleGranted',
+      aggregateType: 'Grant',
+      aggregateId: event.grantId,
+      schoolId: event.schoolId,
+      occurredAt: event.occurredAt.toISOString(),
+      outcome: 'discarded',
+    });
+  },
 };

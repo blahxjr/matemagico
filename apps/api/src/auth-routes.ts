@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { AuthError, type AuthErrorCode } from '@matemagico/auth';
+import { logger } from '@matemagico/logger';
 import type { CompositionRoot } from '@matemagico/composition-root';
 import { InvalidBodyError, readJsonObject, sendJson } from './http';
 
@@ -15,6 +16,12 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
 function sendAuthError(res: ServerResponse, error: unknown): void {
   // Fail closed: anything that is not a known AuthError is a dependency failure.
   const code: AuthErrorCode = error instanceof AuthError ? error.code : 'AUTH-004';
+  const context = {
+    errorCode: code,
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+  };
+  if (STATUS_BY_CODE[code] >= 500) logger.error('auth.request.failed', context);
+  else logger.warn('auth.request.failed', context);
   sendJson(res, STATUS_BY_CODE[code], { error: { code } });
 }
 

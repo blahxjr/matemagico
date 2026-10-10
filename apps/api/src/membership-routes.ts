@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { MembershipError, type MembershipErrorCode } from '@matemagico/membership';
+import { addLogContext, logger } from '@matemagico/logger';
 import type { CompositionRoot } from '@matemagico/composition-root';
 import { InvalidBodyError, readJsonObject, sendJson } from './http';
 
@@ -16,10 +17,20 @@ class InvalidRequestError extends Error {}
 
 function sendMembershipError(res: ServerResponse, error: unknown): void {
   if (error instanceof InvalidRequestError || error instanceof InvalidBodyError) {
+    logger.warn('membership.request.failed', {
+      errorCode: 'INVALID_REQUEST',
+      errorName: error instanceof InvalidBodyError ? 'InvalidBodyError' : 'InvalidRequestError',
+    });
     return sendJson(res, 400, { error: { code: 'INVALID_REQUEST' } });
   }
   // Fail closed: anything that is not a known MembershipError is MEM-005.
   const code: MembershipErrorCode = error instanceof MembershipError ? error.code : 'MEM-005';
+  const context = {
+    errorCode: code,
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+  };
+  if (STATUS_BY_CODE[code] >= 500) logger.error('membership.request.failed', context);
+  else logger.warn('membership.request.failed', context);
   sendJson(res, STATUS_BY_CODE[code], { error: { code } });
 }
 
@@ -66,6 +77,9 @@ export function handleMembershipRoute(
   const run = async () => {
     try {
       const body = await readJsonObject(req);
+      if (typeof body.schoolId === 'string' && body.schoolId.trim()) {
+        addLogContext({ schoolId: body.schoolId });
+      }
       if (!action) return await create(root, body, res);
       const membershipId = decodeSegment(action[1]!);
       if (!membershipId.trim()) throw new InvalidRequestError();
@@ -118,5 +132,6 @@ async function grant(
     validFrom: new Date(),
     actor: { userId: actorUserId },
   });
+  addLogContext({ schoolId: output.schoolId });
   sendJson(res, 201, { grantId: output.grantId });
 }

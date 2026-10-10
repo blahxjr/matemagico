@@ -10,7 +10,9 @@
     },
     "test": {
       "dependsOn": ["^test"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "cache": false,
+      "env": ["DATABASE_URL", "TEST_DATABASE_URL"]
     },
     "test:coverage": {
       "dependsOn": ["^test:coverage"],
