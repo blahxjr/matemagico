@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
+  Argon2idPasswordVerifier,
   AuthenticateUserService,
   GetSessionService,
   AuthAccountPrismaRepository,
@@ -19,7 +20,9 @@ import {
   SchoolMembershipPrismaRepository,
   ValidateSchoolContextService,
 } from '@matemagico/membership';
-import { createCompositionRoot, noUserDirectory } from './index';
+import { CreateSchoolService, PrismaSchoolRepository } from '@matemagico/schools';
+import { CreateUserService, PrismaUserRepository } from '@matemagico/users';
+import { createCompositionRoot } from './index';
 
 // PrismaClient connects lazily, so composition needs no database.
 const prisma = new PrismaClient({ datasourceUrl: 'postgresql://x:x@127.0.0.1:1/x' });
@@ -73,17 +76,22 @@ describe('composition root', () => {
     expect(deps(root.services.authenticateUser).sessions).toBe(root.repositories.sessions);
   });
 
-  it('fails closed with the provisional ports', async () => {
-    await expect(
-      root.services.createMembership.execute({
-        actor: { userId: 'u1' },
-        userId: 'u2',
-        schoolId: 's1',
-      } as never),
-    ).rejects.toMatchObject({ code: 'MEM-005' });
+  it('wires the real ports: no provisional fail-closed implementations', () => {
+    const deps = (service: object) => (service as { deps: Record<string, unknown> }).deps;
+    expect(deps(root.services.resolveSchoolContext).users).toBe(root.directories.users);
+    expect(deps(root.services.resolveSchoolContext).schools).toBe(root.directories.schools);
+    expect(deps(root.services.createMembership).actorAuthorizer).toBe(root.actorAuthorizer);
+    expect(deps(root.services.deactivateSchool).authorizer).toBe(root.actorAuthorizer);
+    expect(deps(root.services.authenticateUser).passwordVerifier).toBeInstanceOf(
+      Argon2idPasswordVerifier,
+    );
+    expect(root.repositories.users).toBeInstanceOf(PrismaUserRepository);
+    expect(root.repositories.schools).toBeInstanceOf(PrismaSchoolRepository);
+    expect(root.services.createUser).toBeInstanceOf(CreateUserService);
+    expect(root.services.createSchool).toBeInstanceOf(CreateSchoolService);
   });
 
-  it('accepts overrides for the provisional ports', () => {
+  it('accepts overrides for the ports', () => {
     const custom = { isActiveUser: async () => true };
     const overridden = createCompositionRoot(prisma, { userDirectory: custom });
     const deps = (
@@ -92,6 +100,6 @@ describe('composition root', () => {
       }
     ).deps;
     expect(deps.users).toBe(custom);
-    expect(deps.users).not.toBe(noUserDirectory);
+    expect(deps.users).not.toBe(overridden.directories.users);
   });
 });

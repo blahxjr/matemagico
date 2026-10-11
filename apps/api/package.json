@@ -8,14 +8,24 @@
     "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:db": "vitest run src/auth-login.e2e.test.ts src/auth-session.e2e.test.ts src/membership-create.e2e.test.ts src/membership-activate.e2e.test.ts src/membership-grant.e2e.test.ts",
+    "test:db": "vitest run src/auth-login.db.e2e.test.ts src/auth-register-logout.e2e.test.ts src/membership.e2e.test.ts src/schools.e2e.test.ts src/questions.e2e.test.ts src/mock-exams.e2e.test.ts",
+    "openapi": "tsx src/generate-openapi.ts",
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@matemagico/auth": "*",
     "@matemagico/composition-root": "*",
     "@matemagico/database": "*",
     "@matemagico/logger": "*",
-    "@prisma/client": "^6.7.0"
+    "@matemagico/membership": "*",
+    "@matemagico/mock-exams": "*",
+    "@matemagico/question-engine": "*",
+    "@matemagico/questions": "*",
+    "@matemagico/schools": "*",
+    "@matemagico/topics": "*",
+    "@matemagico/users": "*",
+    "@prisma/client": "^6.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

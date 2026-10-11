@@ -101,6 +101,12 @@ class Admins implements ActorAuthorizer {
     if (this.failing) throw new Error('authorization unavailable');
     return actor.userId === 'admin-1';
   }
+  canActivateMembership(actor: { userId: string }) {
+    return this.canAdministerSchool(actor);
+  }
+  canGrantRole(actor: { userId: string }) {
+    return this.canAdministerSchool(actor);
+  }
 }
 
 const events: MembershipEventPublisher = {

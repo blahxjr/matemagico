@@ -14,7 +14,17 @@ if (databaseUrl !== testDatabaseUrl) {
 }
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const workspaces = ['@matemagico/auth', '@matemagico/membership', '@matemagico/api'];
+const workspaces = [
+  '@matemagico/auth',
+  '@matemagico/users',
+  '@matemagico/schools',
+  '@matemagico/topics',
+  '@matemagico/questions',
+  '@matemagico/mock-exams',
+  '@matemagico/membership',
+  '@matemagico/composition-root',
+  '@matemagico/api',
+];
 
 for (const workspace of workspaces) {
   console.log(`Running database tests for ${workspace}`);

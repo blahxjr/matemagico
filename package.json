@@ -25,7 +25,15 @@
     "db:validate": "npm run db:validate --workspace @matemagico/database",
     "db:migrate": "npm run db:migrate --workspace @matemagico/database",
     "db:migrate:deploy": "npm run db:migrate:deploy --workspace @matemagico/database",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed": "tsx scripts/seed.ts",
+    "questions:generate": "tsx scripts/generate-mock-questions.ts",
+    "questions:import": "tsx scripts/import-questions.ts",
+    "prisma:migrate": "npm run db:migrate:deploy",
+    "prisma:migrate:dev": "npm run db:migrate"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -36,6 +44,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.5.3",
+    "tsx": "^4.23.15",
     "turbo": "^2.5.0",
     "typescript": "^5.8.3"
   }

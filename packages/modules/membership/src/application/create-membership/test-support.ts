@@ -27,6 +27,12 @@ class FakeAuthorizer implements ActorAuthorizer {
     if (this.failing) throw new Error('authorization unavailable');
     return this.allowed && !this.denied.has(actor.userId);
   }
+  canActivateMembership(actor: { userId: string }, schoolId: string): Promise<boolean> {
+    return this.canAdministerSchool(actor, schoolId);
+  }
+  canGrantRole(actor: { userId: string }, schoolId: string, _roleId: string): Promise<boolean> {
+    return this.canAdministerSchool(actor, schoolId);
+  }
 }
 
 class FakeUsers implements UserDirectory {

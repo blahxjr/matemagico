@@ -11,7 +11,8 @@
     "test:db": "vitest run src/infrastructure/persistence/prisma/auth-prisma-adapters.db.test.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.7.0"
+    "@prisma/client": "^6.7.0",
+    "argon2": "^0.45.1"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

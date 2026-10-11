@@ -4,7 +4,17 @@ import { addLogContext, logger, withLogContext } from '@matemagico/logger';
 import type { CompositionRoot } from '@matemagico/composition-root';
 import { handleAuthRoute } from './auth-routes';
 import { handleMembershipRoute } from './membership-routes';
+import { handleSchoolRoute } from './school-routes';
+import { handleQuestionRoute } from './question-routes';
+import { handleTopicRoute } from './topic-routes';
+import { handleMockExamRoute } from './mock-exam-routes';
 import { sendJson } from './http';
+import { buildOpenApiDocument } from './openapi';
+
+export interface AppOptions {
+  /** Exact origins allowed by CORS (CORS_ALLOWED_ORIGINS). Empty disables CORS headers. */
+  readonly corsAllowedOrigins?: readonly string[];
+}
 
 const READINESS_TIMEOUT_MS = 2000;
 
@@ -22,12 +32,32 @@ function getHeaderId(value: string | string[] | undefined): string | undefined {
 function getModule(path: string): string {
   if (path.startsWith('/auth/')) return 'auth';
   if (path === '/memberships' || path.startsWith('/memberships/')) return 'membership';
+  if (path === '/schools' || path.startsWith('/schools/')) return 'schools';
+  if (path === '/schools' || path.startsWith('/schools/')) return 'schools';
+  if (path === '/topics' || path.startsWith('/topics/')) return 'topics';
+  if (path === '/questions' || path.startsWith('/questions/')) return 'questions';
+  if (path === '/exams' || path.startsWith('/exams/')) return 'mock-exams';
   return 'platform';
 }
 
+/** Only these read routes accept a (strictly validated) query string. */
+const QUERY_ROUTES = [/^\/topics(\/[^/]+)?$/, /^\/questions(\/[^/]+)?$/, /^\/exams(\/[^/]+)?$/];
+
 function getRoute(path: string): string {
-  if (path === '/auth/login') return path;
-  if (/^\/auth\/session\/[^/]+$/.test(path)) return '/auth/session/:sessionId';
+  if (path === '/topics' || path === '/questions' || path === '/exams') return path;
+  if (/^\/topics\/[^/]+$/.test(path)) return '/topics/:topicId';
+  if (/^\/questions\/[^/]+$/.test(path)) return '/questions/:questionId';
+  if (/^\/questions\/[^/]+\/(publish|archive|version)$/.test(path)) {
+    return `/questions/:questionId/${path.split('/')[3]}`;
+  }
+  if (/^\/exams\/[^/]+\/(publish|archive|start)$/.test(path)) {
+    return `/exams/:examId/${path.split('/')[3]}`;
+  }
+  if (/^\/exams\/[^/]+$/.test(path)) return '/exams/:examId';
+  if (['/auth/login', '/auth/register', '/auth/logout', '/auth/me'].includes(path)) return path;
+  if (path === '/schools') return path;
+  if (/^\/schools\/[^/]+$/.test(path)) return '/schools/:schoolId';
+  if (path === '/openapi.json') return path;
   if (path === '/memberships') return path;
   if (/^\/memberships\/[^/]+\/activate$/.test(path)) return '/memberships/:membershipId/activate';
   if (/^\/memberships\/[^/]+\/grants$/.test(path)) return '/memberships/:membershipId/grants';
@@ -64,9 +94,10 @@ export async function isReady(root: CompositionRoot): Promise<boolean> {
   }
 }
 
-export function createApp(root: CompositionRoot): Server {
+export function createApp(root: CompositionRoot, options: AppOptions = {}): Server {
+  const allowedOrigins = new Set(options.corsAllowedOrigins ?? []);
   return createServer((req: IncomingMessage, res: ServerResponse) => {
-    const path = (req.url ?? '').split('?')[0];
+    const [path = '', query] = (req.url ?? '').split('?');
     const requestId = getHeaderId(req.headers['x-request-id']) ?? randomUUID();
     const correlationId = getHeaderId(req.headers['x-correlation-id']) ?? requestId;
     const module = getModule(path);
@@ -89,6 +120,33 @@ export function createApp(root: CompositionRoot): Server {
       });
 
       try {
+        const origin = req.headers.origin;
+        if (typeof origin === 'string' && allowedOrigins.has(origin)) {
+          res.setHeader('access-control-allow-origin', origin);
+          res.setHeader('vary', 'Origin');
+          if (req.method === 'OPTIONS') {
+            res.setHeader('access-control-allow-methods', 'GET, POST, PATCH, OPTIONS');
+            res.setHeader('access-control-allow-headers', 'authorization, content-type');
+            res.setHeader('access-control-max-age', '600');
+            res.writeHead(204);
+            return void res.end();
+          }
+        }
+
+        if (path === '/openapi.json') {
+          if (req.method !== 'GET') {
+            res.setHeader('allow', 'GET');
+            return send(res, 405, { status: 'method_not_allowed' });
+          }
+          return sendJson(res, 200, buildOpenApiDocument());
+        }
+
+        // Query strings are not part of any contract: identity (or anything else) cannot ride on them.
+        const queryAllowed = req.method === 'GET' && QUERY_ROUTES.some((route) => route.test(path));
+        if (query !== undefined && path !== '/health' && path !== '/ready' && !queryAllowed) {
+          return sendJson(res, 400, { error: { code: 'INVALID_REQUEST' } });
+        }
+
         if (path === '/health' || path === '/ready') {
           if (req.method !== 'GET') {
             res.setHeader('allow', 'GET');
@@ -103,6 +161,10 @@ export function createApp(root: CompositionRoot): Server {
 
         if (handleAuthRoute(root, req, res, path)) return;
         if (handleMembershipRoute(root, req, res, path)) return;
+        if (handleSchoolRoute(root, req, res, path)) return;
+        if (handleTopicRoute(root, req, res, path)) return;
+        if (handleQuestionRoute(root, req, res, path)) return;
+        if (handleMockExamRoute(root, req, res, path)) return;
 
         send(res, 404, { status: 'not_found' });
       } catch (error) {

@@ -1,13 +1,13 @@
 # ADR-0001 - Base Architecture
 
 **Date**: 2026-10-01 (decisao originalmente registrada em 2026-09-29)  
-**Status recomendado**: Proposed, ate que a aprovacao formal e o status do texto embutido sejam reconciliados  
+**Status**: Proposed (aprovacao formal pendente)
 **Deciders**: Architecture Team (conforme Documento Mestre; nomes individuais nao registrados)  
 **Revisores**: Product Manager, Tech Lead, CTO/VP Engineering e equipe estao listados para stakeholder review em `memory/next-steps.md`; revisao concluida e sign-off nao estao comprovados  
 **Dependencias**: Visao do produto e restricoes de stack  
 **ADRs derivados**: ADR-0002, ADR-0003, ADR-0004; ADR-0005 deriva dos ADRs 0002-0004. ADR-0009 deriva de 0002-0004 e ADR-0010 depende de 0005 e dos requisitos de UI do produto, conforme `INDEX.md`.
 
-> Este documento formaliza apenas a decisao arquitetural ja registrada no Documento Mestre. O status Proposed recomendado preserva a ressalva de aprovacao pendente no `INDEX.md`; nao significa que a decisao tenha sido rejeitada nem ratificada.
+> Este arquivo e a referencia canonica do ADR-0001. O trecho correspondente em `ARCHITECTURE.md` e mantido como fonte historica, nao normativa. O status Proposed nao significa rejeicao nem ratificacao.
 
 ## 1. Contexto
 
@@ -116,37 +116,36 @@ O arquivo state-only anterior chamado ADR-0005 e Superseded; nao e o ADR-0005 ca
 
 ### Evidencias encontradas
 
-- O Documento Mestre, secao 6, declara **Status: Accepted** e **Deciders: Architecture Team**.
-- O `INDEX.md` aponta para o ADR-0001 embutido, mas explicita que stakeholder approval esta pendente e precisa ser reconciliada.
+- O Documento Mestre, secao 6, registra historicamente **Status: Accepted** e **Deciders: Architecture Team**.
+- Nao ha sign-off concluido ou nomes individuais de aprovadores registrados para comprovar esse aceite.
 - `memory/project-state.md` tambem registra stakeholder approval pendente; os proximos passos documentam uma revisao/sign-off ainda por realizar.
 - Nao foram encontradas checklists preenchidas ou nomes individuais de aprovadores para comprovar o aceite.
 - ADR-0002, ADR-0003 e ADR-0004, que derivam desta fundacao, permanecem Proposed.
 
-### Status recomendado
+### Status atual
 
-**Proposed**, ate que os responsaveis confirmem e registrem formalmente se a declaracao Accepted do texto embutido foi aprovada. Esta recomendacao e de governanca baseada na ausencia de evidência de sign-off; nao altera retroativamente o status escrito no Documento Mestre.
+**Proposed**, ate que os deciders confirmem e registrem formalmente a decisao. O `Accepted` no trecho embutido e historico e nao substitui evidencia de aprovacao.
 
-Nao ha evidência suficiente nas fontes examinadas para declarar **Accepted** sem ressalva. A decisao de aceite pertence aos deciders/stakeholders, nao a este documento. Ate a reconciliacao, esta formalizacao deve ser tratada como proposta de registro e nao como aprovacao nova.
+Nao ha evidencia suficiente para declarar **Accepted**. A decisao de aceite pertence aos deciders/stakeholders, nao a este documento.
 
 ## 8. Revisao de consistencia
 
 ### Alinhamento com INDEX.md
 
-- **Alinhamento:** titulo/numero e dependencia de produto/stack seguem a entrada ADR-0001 do indice; os ADRs derivados e suas dependencias foram preservados.
-- **Divergencia aberta:** o indice ainda aponta `ARCHITECTURE.md`, secao 6, como documento canonico e declara Accepted no cabecalho com aprovacao pendente. Este arquivo novo nao esta registrado no indice.
-- **Consequencia:** criar este arquivo nao o torna automaticamente fonte canonica nem atualiza o indice. A referencia canonica e o status precisam ser reconciliados pelos responsaveis.
+- **Alinhamento:** o indice aponta este arquivo como referencia canonica e registra ADR-0001 como Proposed, com aprovacao pendente.
+- O trecho em `ARCHITECTURE.md`, secao 6, permanece como fonte historica; o seu status Accepted nao e normativo para a baseline corrente.
 
 ### Alinhamento com ARCHITECTURE-GOVERNANCE-BASELINE-2026-10-01.md
 
-- **Alinhamento:** o status recomendado Proposed reflete a conclusao de que nao ha baseline aprovada comprovavel; a arquitetura e stack foram limitadas ao que esta documentado.
+- **Alinhamento:** o status Proposed reflete a conclusao de que nao ha baseline aprovada comprovavel; a arquitetura e stack foram limitadas ao que esta documentado.
 - **Alinhamento:** contratos/eventos/ownership/multi-escola foram registrados sem duplicar os detalhes pertencentes aos ADRs derivados.
-- **Divergencia deliberadamente preservada:** o baseline de governanca informa que ADR-0001 esta embutido e que a sua autonomia/rastreabilidade esta pendente. Este arquivo atende a solicitacao de formalizacao, mas ainda depende de reconciliacao no indice.
+- A formalizacao em arquivo autonomo melhora a rastreabilidade; a aprovacao continua pendente.
 
 ### Alinhamento com ARCHITECTURE-AUDIT-2026-10-01.md
 
 - **Alinhamento:** o status da fundacao e tratado como ambiguo e sem sign-off comprovado; a meta de 100 mil alunos nao e apresentada como capacidade demonstrada.
-- **Limite da fonte:** a auditoria e analise, nao aprovacao. Suas observacoes nao mudam o status registrado no `INDEX.md` nem no Documento Mestre.
-- **Divergencia aberta:** a auditoria recomenda reconciliar o ADR-0001, enquanto o Documento Mestre ainda exibe Accepted. Este ADR registra a mesma divergencia e nao escolhe aceite em nome dos stakeholders.
+- **Limite da fonte:** a auditoria e analise, nao aprovacao. Suas observacoes nao alteram o status Proposed registrado no `INDEX.md`.
+- A divergencia de status documental foi resolvida editorialmente: o cabecalho Accepted embutido e historico; sign-off formal continua pendente.
 
 ### Alinhamento com ADR-0002, ADR-0003 e ADR-0004
 
@@ -173,19 +172,17 @@ Nao ha evidência suficiente nas fontes examinadas para declarar **Accepted** se
 
 ### Decisoes ainda pendentes
 
-- Status final do ADR-0001: o cabeçalho embutido declara Accepted, enquanto indice e memoria indicam sign-off pendente.
-- Se esta formalizacao em arquivo autonomo substituira o texto embutido como referencia canonica.
-- Aprovacao dos ADRs derivados, todos Proposed no indice.
+- Aprovacao formal do ADR-0001 e dos ADRs derivados, todos Proposed no indice.
 
 ### Pontos que exigem aprovacao formal
 
 - Confirmacao do aceite ou manutencao como Proposed da arquitetura base.
 - Registro de deciders/revisores e evidência de sign-off.
-- Atualizacao do `INDEX.md` para refletir o destino canonico e status decididos; nao foi feita nesta tarefa.
+- Registro de deciders, revisores e evidencias de sign-off.
 
 ### Proximos artefatos recomendados
 
-- Atualizar o `INDEX.md` somente apos a decisao formal de status/canonicalidade.
+- Manter o `INDEX.md` alinhado a cada mudanca formal de status ou relacao.
 - Manter ADR-0002, ADR-0003 e ADR-0004 como fontes especializadas para limites de modulo, dados/tenancy e autenticacao.
 - Nao duplicar neste ADR detalhes de contratos, eventos, ownership, tenancy ou autenticacao que pertencem aos ADRs derivados.
 

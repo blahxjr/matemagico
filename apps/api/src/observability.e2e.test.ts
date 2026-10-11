@@ -49,21 +49,18 @@ describe('request observability', () => {
           'x-correlation-id': 'membership-correlation',
         },
         body: JSON.stringify({
-          actorUserId: 'private-actor-value',
           userId: 'private-user-value',
           schoolId: 'school-42',
         }),
       });
 
-      expect(response.status).toBe(503);
+      expect(response.status).toBe(401);
       const entries = [...warnings.mock.calls, ...errors.mock.calls].map(([line]) => String(line));
-      expect(entries.join('\n')).not.toContain('private-actor-value');
       expect(entries.join('\n')).not.toContain('private-user-value');
-      expect(entries.join('\n')).toContain('"schoolId":"school-42"');
       expect(entries.join('\n')).toContain('"requestId":"membership-request"');
       expect(entries.join('\n')).toContain('"correlationId":"membership-correlation"');
       expect(entries.join('\n')).toContain('"module":"membership"');
-      expect(entries.join('\n')).toContain('"errorCode":"MEM-005"');
+      expect(entries.join('\n')).toContain('"errorCode":"AUTH-003"');
     } finally {
       await app.close();
     }
