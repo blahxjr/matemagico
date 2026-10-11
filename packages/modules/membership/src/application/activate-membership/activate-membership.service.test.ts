@@ -92,10 +92,26 @@ describe('ActivateMembershipService', () => {
     expect(h.memberships.store.get(membershipId)?.state).toBe('PENDING');
   });
 
+  it('marks a denial as an access decision, distinct from an unavailable authorizer', async () => {
+    const { h, membershipId } = await pending();
+    h.authorizer.canActivateMembership = async () => false;
+    expect(await h.activate(membershipId).catch((e) => e)).toMatchObject({
+      code: 'MEM-005',
+      denied: true,
+    });
+    h.authorizer.canActivateMembership = async () => {
+      throw new Error('down');
+    };
+    expect(await h.activate(membershipId).catch((e) => e)).toMatchObject({
+      code: 'MEM-005',
+      denied: false,
+    });
+  });
+
   it('authorizes against the School of the Membership, not another School', async () => {
     const { h, membershipId } = await pending();
     const asked: string[] = [];
-    h.authorizer.canAdministerSchool = async (_actor, schoolId) => {
+    h.authorizer.canActivateMembership = async (_actor, schoolId) => {
       asked.push(schoolId);
       return schoolId === 'other-school';
     };

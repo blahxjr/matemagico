@@ -1,9 +1,11 @@
 # ADR-0010 - Frontend Architecture and UI Composition Strategy
 
 **Date**: 2026-09-29  
-**Status**: Proposed (aguardando revisão e aprovação)  
+**Status**: Superseded by ADR-0005  
 **Deciders**: Architecture Lead, Frontend Lead, Tech Lead e Product (a confirmar)  
 **Affects**: apps/web, packages/ui, packages/shared-types, todos os módulos de domínio, autenticação, analytics e experiência do usuário
+
+> Superseded (Prompt 01, baseline). A decisão canônica de frontend é o ADR-0005 (ver ADR-INDEX.md), inclusive composição, acessibilidade e performance (§2.9). Este documento é mantido apenas como histórico; design system detalhado exige novo ADR quando o frontend entrar no escopo. Não usar como decisão normativa.
 
 ---
 
@@ -21,18 +23,13 @@ Os ADRs anteriores estabeleceram:
 - Auth.js
 - Comunicação por contratos e eventos
 
-Contudo, ainda não existe uma decisão formal sobre:
+O ADR-0005 consolida as decisões de estado, leitura/mutação, formulários e BFF. Esta proposta permanece limitada às decisões de composição visual ainda necessárias:
 
-- Organização da camada frontend
-- Estrutura das páginas
-- Estratégia de Server Components
-- Estratégia de Client Components
-- Estado da interface
-- Formulários
-- Design System
-- Acessibilidade
-- Performance
-- Composição de features
+- Organização visual por jornada e composição de features
+- Design System e biblioteca de componentes
+- Acessibilidade e responsividade
+- Apresentação consistente de dashboards
+- Metas de performance visual e redução de bundle
 
 Sem essa definição existe risco de:
 
@@ -55,8 +52,6 @@ Sem essa definição existe risco de:
 - A UI não pode acessar Prisma diretamente.
 - A UI não pode acessar banco de dados.
 - A UI não pode importar entidades internas dos módulos.
-- A UI deve funcionar com SSR, SSG e Streaming.
-- A aplicação deve permanecer compatível com crescimento para mais de 100 mil alunos.
 
 ---
 
@@ -65,7 +60,7 @@ Sem essa definição existe risco de:
 - Separar claramente UI e domínio.
 - Maximizar reutilização de componentes.
 - Garantir acessibilidade.
-- Garantir performance.
+- Definir performance visual como metas a validar, não como resultados medidos.
 - Facilitar manutenção.
 - Facilitar testes.
 - Permitir múltiplos dashboards.
@@ -151,38 +146,15 @@ providers/
 
 ---
 
-## 2.3 Server Components por padrão
+## 2.3 Limites de escopo
 
-Todo componente deve nascer como:
-
-```tsx
-Server Component
-```
-
-Client Components serão utilizados apenas quando houver:
-
-- interação do usuário
-- formulário
-- estado local
-- animação
-- websocket
-- drag and drop
+Renderização Server/Client, leitura e mutação, estado, comportamento de formulários, cache e BFF seguem o ADR-0005. Fronteiras entre módulos e autorização seguem os ADRs-0002 e ADR-0004. Este ADR decide somente apresentação e composição visual, incluindo a composição dos controles de formulário.
 
 ---
 
-## 2.4 Regra de ouro
+## 2.4 Composição de componentes
 
-Preferir:
-
-```tsx
-Server Component
-```
-
-antes de:
-
-```tsx
-'use client';
-```
+Preferir composição de componentes visuais pequenos e reutilizáveis.
 
 ---
 
@@ -237,84 +209,7 @@ packages/ui
 
 ---
 
-## 2.6 Formulários
-
-Padrão obrigatório:
-
-```text
-React Hook Form
-+
-Zod
-```
-
-Fluxo:
-
-```text
-UI
-→ validação Zod
-→ Action
-→ módulo
-→ resposta
-```
-
-A validação nunca dependerá apenas do navegador.
-
----
-
-## 2.7 Estratégia de Estado
-
-O ownership de estado, Zustand, TanStack Query, cache e BFF e definido pelo [ADR-0005](ADR-0005-frontend-architecture-state-management-bff.md). Esta secao complementa somente composicao visual; em conflito, ADR-0005 e normativo.
-
-### Estado Local
-
-Utilizar `useState`/`useReducer` para estado efemero do componente ou fluxo visual.
-
----
-
-### Estado do Servidor
-
-Dados remotos e sessao permanecem server-owned e sao lidos por Server Components/contratos do modulo owner, conforme ADR-0005. Filtros e paginacao compartilhaveis pertencem a URL/search params.
-
----
-
-### Estado Global
-
-Nao ha estado global de dominio. Zustand pode conter somente estado efemero de UI compartilhado dentro de uma feature, conforme os limites e lifecycle do ADR-0005. Auth.js/session, roles, permissoes e `schoolId` de autorizacao sao server-owned.
-
----
-
-### Proibido
-
-Armazenar:
-
-- domínio
-- tentativas
-- rankings
-- trilhas
-
-em stores globais.
-
-Esses dados pertencem aos módulos. Tambem e proibido persistir credenciais, tokens, roles/permissoes autoritativas ou `schoolId` como prova de acesso no browser.
-
----
-
-## 2.8 Comunicação com Backend
-
-A UI nunca acessa Prisma.
-
-Fluxo obrigatório:
-
-```text
-Page
-→ Server Action
-→ Módulo
-→ Caso de Uso
-→ Resultado
-```
-
----
-
-## 2.9 Estratégia de Dashboard
+## 2.6 Estratégia de Dashboard
 
 Todos os dashboards utilizarão:
 
@@ -339,7 +234,7 @@ Tipos:
 
 ---
 
-## 2.10 Acessibilidade
+## 2.7 Acessibilidade
 
 Meta mínima:
 
@@ -357,7 +252,7 @@ Obrigatório:
 
 ---
 
-## 2.11 Performance
+## 2.8 Performance
 
 Metas iniciais:
 
@@ -371,15 +266,13 @@ Metas iniciais:
 
 Estratégias:
 
-- Streaming
-- Suspense
 - Dynamic Import
 - Image Optimization
 - Route Segmentation
 
 ---
 
-## 2.12 Responsividade
+## 2.9 Responsividade
 
 Breakpoints:
 
@@ -394,7 +287,7 @@ Mobile-first obrigatório.
 
 ---
 
-## 2.13 Tema
+## 2.10 Tema
 
 Inicialmente:
 
@@ -435,32 +328,27 @@ Persistidos em preferência do usuário.
 
 ## Negativas
 
-- Maior curva de aprendizado em Server Components.
-- Disciplina obrigatória para evitar uso excessivo de Client Components.
+- Necessidade de manter consistência entre componentes compartilhados e jornadas.
 - Necessidade de design system consistente.
 
 ---
 
 ## Trade-offs aceitos
 
-| Trade-off                  | Aceito porque       | Monitorar                  |
-| -------------------------- | ------------------- | -------------------------- |
-| Mais SSR                   | Melhor performance  | Tempo de renderização      |
-| Menos estado global        | Menos acoplamento   | Complexidade de composição |
-| Design System centralizado | Consistência visual | Evolução dos componentes   |
+| Trade-off                  | Aceito porque       | Monitorar                |
+| -------------------------- | ------------------- | ------------------------ |
+| Design System centralizado | Consistência visual | Evolução dos componentes |
 
 ---
 
 # 4. Riscos
 
-| ID  | Risco                              | Severidade | Probabilidade | Mitigação                 |
-| --- | ---------------------------------- | ---------- | ------------- | ------------------------- |
-| R1  | Uso excessivo de Client Components | Alta       | Média         | Revisão arquitetural      |
-| R2  | Duplicação de componentes          | Média      | Média         | Design System obrigatório |
-| R3  | Regras de negócio na UI            | Alta       | Média         | Code Review               |
-| R4  | Bundle excessivo                   | Alta       | Média         | Análise contínua          |
-| R5  | Baixa acessibilidade               | Alta       | Média         | Auditorias WCAG           |
-| R6  | Estado global excessivo            | Média      | Média         | Restringir Zustand        |
+| ID  | Risco                     | Severidade | Probabilidade | Mitigação                 |
+| --- | ------------------------- | ---------- | ------------- | ------------------------- |
+| R1  | Duplicação de componentes | Média      | Média         | Design System obrigatório |
+| R2  | Regras de negócio na UI   | Alta       | Média         | Code Review               |
+| R3  | Bundle excessivo          | Alta       | Média         | Análise contínua          |
+| R4  | Baixa acessibilidade      | Alta       | Média         | Auditorias WCAG           |
 
 ---
 
@@ -469,7 +357,6 @@ Persistidos em preferência do usuário.
 - Crescimento excessivo do bundle.
 - LCP acima de 2.5 segundos.
 - Componentes duplicados.
-- Crescimento de stores globais.
 - Queda de acessibilidade.
 - Aumento de lógica de negócio no frontend.
 

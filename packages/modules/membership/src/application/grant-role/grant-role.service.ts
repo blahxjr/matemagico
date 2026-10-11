@@ -59,6 +59,7 @@ export class GrantRoleService {
     const actor = input?.actor;
     if (!actor || isBlank(actor.userId)) throw new MembershipError('MEM-005');
     if (isBlank(input.membershipId)) throw new MembershipError('MEM-001');
+    if (isBlank(input.roleId)) throw new MembershipError('MEM-004');
 
     const membership = await this.attempt(
       () => this.deps.memberships.findById(toMembershipId(input.membershipId)),
@@ -68,15 +69,15 @@ export class GrantRoleService {
 
     // The actor must administer the School of the Membership, never a client-supplied School.
     const authorized = await this.attempt(
-      () => this.deps.actorAuthorizer.canAdministerSchool(actor, membership.schoolId),
+      () => this.deps.actorAuthorizer.canGrantRole(actor, membership.schoolId, input.roleId),
       'MEM-005',
     );
-    if (!authorized) throw new MembershipError('MEM-005');
+    if (!authorized) throw MembershipError.accessDenied();
 
     if (membership.state !== 'ACTIVE') throw new MembershipError('MEM-001');
 
     // No self-elevation: an actor cannot grant Roles to their own Membership.
-    if (membership.userId === actor.userId) throw new MembershipError('MEM-005');
+    if (membership.userId === actor.userId) throw MembershipError.accessDenied();
 
     const schoolEnabled = await this.attempt(
       () => this.deps.schools.isEnabledSchool(membership.schoolId),
@@ -84,7 +85,6 @@ export class GrantRoleService {
     );
     if (!schoolEnabled) throw new MembershipError('MEM-003');
 
-    if (isBlank(input.roleId)) throw new MembershipError('MEM-004');
     if (!isValidDate(input.validFrom)) throw new MembershipError('MEM-004');
     const validUntil = input.validUntil ?? undefined;
     if (validUntil !== undefined && (!isValidDate(validUntil) || validUntil <= input.validFrom)) {

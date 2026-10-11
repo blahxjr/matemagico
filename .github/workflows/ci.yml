@@ -5,9 +5,57 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+      - name: Audit production dependencies (blocking)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit full dependency graph (informational)
+        # braces (GHSA-vfj7-8cjw-p6xm) has no patched release; it is only reachable via eslint-config-next (dev-only).
+        continue-on-error: true
+        run: npm audit --audit-level=high
+      - name: Scan repository changes for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+
   quality:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/matemagico_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/matemagico_test?schema=public
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: matemagico_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d matemagico_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -15,8 +63,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Validate Prisma schema
+        run: npm run db:validate
       - name: Generate Prisma Client
         run: npm run db:generate --workspace @matemagico/database
+      - name: Apply database migrations
+        run: npm run db:migrate:deploy
+      - name: Seed baseline data
+        run: npm run seed
+      - name: Run database tests
+        run: npm run test:db
+      - name: Run event contract tests
+        run: npm run test:contract
       - run: npm run format:check
       - run: npm run lint
       - run: npm run test

@@ -5,10 +5,11 @@
   "scripts": {
     "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "test:contract": "vitest run src/contracts.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "vitest": "^3.0.8"
+    "vitest": "^4.1.11"
   }
 }

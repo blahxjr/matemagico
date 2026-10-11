@@ -1,151 +1,49 @@
 # Project State - MateMágico Champions
 
-**Last Update**: 2026-09-29  
-**Status**: Foundation Started; stakeholder approval pending
-**Version**: 1.0.0
+**Last Update**: 2026-10-10
+**Phase**: Prompt 05 (Question Engine + Mock Exams) complete; next is Prompt 06 (Attempts + AutoCorrect + Outbox + Ranking Base)
 
----
+## Stack
 
-## Current Phase
+npm workspaces + Turborepo, TypeScript, Vitest (unit/integration), Playwright (e2e), PostgreSQL 16 + Prisma, Node 22. Not pnpm, not Jest.
 
-**Phase**: Foundation Technical Bootstrap  
-**Milestone**: Foundation Bootstrap Completed  
-**Progress**: Foundation infrastructure created; domain implementation has not started.
+## Module status
 
----
+| Module / Area                  | Status                                                                                                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth                           | Implemented (domain, services, Prisma adapters, HTTP routes)                                                                                                                      |
+| Membership                     | Implemented (incl. School Context, Roles/Grants, Prisma adapters, routes)                                                                                                         |
+| API (`apps/api`)               | Secure: Session -> Actor (Bearer), `/auth/{register,login,logout,me}`, `/memberships*`, `/schools*`, `/openapi.json`, CORS via `CORS_ALLOWED_ORIGINS`                             |
+| Users, Schools                 | Implemented (`@matemagico/users`, `@matemagico/schools`, Prisma adapters)                                                                                                         |
+| Topics, Questions              | Implemented (`@matemagico/topics`, `@matemagico/questions`): versioned bank, filters, JSON/CSV import, 100 MOCK questions seeded, `/topics*` and `/questions*` routes (Prompt 04) |
+| Question Engine                | Implemented (`@matemagico/question-engine`): published/current-only filtering, stable seeded selection, no duplicates, insufficient pool fails (Prompt 05)                        |
+| Mock Exams                     | Implemented (`@matemagico/mock-exams`): Prisma Exam/ExamQuestion, frozen question versions, DRAFT/PUBLISHED/ARCHIVED lifecycle, authorization-only StartExam (Prompt 05)          |
+| Attempts, AutoCorrect, Ranking | Not started (Prompt 06+)                                                                                                                                                          |
+| Web (`apps/web`)               | Scaffold only; out of MVP baseline                                                                                                                                                |
 
-## Key Metrics
+## Real ports (Prompt 02)
 
-| Metric                      | Value                       | Target                  | Status                          |
-| --------------------------- | --------------------------- | ----------------------- | ------------------------------- |
-| Bounded contexts documented | 16 + AI future              | ADR-0002 registry       | ✅ Documentary baseline         |
-| ADRs written                | 10 numbered decisions/files | Index/lifecycle aligned | ✅ Pending formal approval      |
-| Documentation %             | 95%                         | 100%                    | 🟡 Near Complete                |
-| Team Size                   | 1                           | 3-5                     | 🟡 Growing                      |
-| Monorepo Setup              | 100%                        | 100%                    | ✅ Foundation workspace created |
+Job `quality` runs PostgreSQL 16 service with health check, `db:validate`, `db:generate`, `prisma migrate deploy`, `seed`, `test:db`, `test:contract`, format, lint, `test`, build, architecture check. Prisma tests run because `TEST_DATABASE_URL` is set.
 
----
+## Session -> Actor (Prompt 03)
 
-## Active Initiatives
+The Actor is derived only from the Session (`Authorization: Bearer <sessionId>`) by `GetSessionActor`. No route accepts `actorUserId` (strict Zod bodies, query strings rejected). Authentication middleware -> 401 (AUTH-003); authorization middleware/services -> 403 (SC-00x, MEM-005). Membership uses `canActivateMembership` / `canGrantRole`; `POST /schools` makes the creator SCHOOL_ADMIN. OpenAPI: `docs/api/openapi.json` (`npm run openapi -w @matemagico/api`). Tests (local, with PostgreSQL): API 41 (20 need a database), Membership 155 + DB suites.
 
-- [ ] **Architecture Approval**
-  - Present to stakeholders
-  - Gather feedback
-  - Obtain sign-off
-  - Est. Timeline: This week
+## Topics + Questions (Prompt 04)
 
-- [x] **ADR 0002-0005 Harmonization**
-  - Module Boundaries, Database Strategy, Authentication and canonical Frontend/BFF proposal
-  - Statuses remain Proposed until formal approval
+Questions are rows `(questionId, version)` (`isCurrent` marks the latest). Published versions are immutable; changes create version N+1 as DRAFT and publishing it archives the previous published version (partial unique indexes enforce one current and one published per question). Writes need `question:create|update|publish` in the `schoolId` of the request (TEACHER/SCHOOL_ADMIN only). Readers see only PUBLISHED questions/ACTIVE topics without `isCorrect`. Content is MOCK only (ADR-0011); import format in `docs/questions/IMPORT-FORMAT.md`. Tests: topics 13, questions 20 (+1 DB each), API e2e 51 (30 need a database, 10 are new); coverage topics ~96%, questions ~95%.
 
-- [ ] **Database Schema Design**
-  - Entity modeling
-  - Prisma schema creation
-  - Migration structure setup
-  - Est. Timeline: 5 days after approval
+## Question Engine + Mock Exams (Prompt 05)
 
-- [x] **Monorepo Initialization**
-  - Turborepo + npm workspaces setup
-  - Package structure creation
-  - GitHub workflows skeleton
-  - Foundation only; domain packages remain empty
+`GenerateQuestionSet` takes level, topic, quantity, and seed; eligible rows must be PUBLISHED and `isCurrent`, selected once each in a stable seeded order. Quantity > available produces `QEN-001`. `MockExam` persists `(examId, questionId, questionVersion, position)` and validates positive duration, valid availability window, unique questions, and publication lifecycle. Published exams have no content edit route; the schedule and question references are retained. `StartExam` checks PUBLISHED + current availability window and returns question options without `isCorrect`; it does not create an Attempt. Teacher/admin permissions: `exam:create`, `exam:publish`; student read/start: `school:read`. DB checks enforce positive duration and valid dates; the migration also has the foreign key to the exact question version.
 
----
+## Tests
 
-## Blockers & Dependencies
+Without database, some Prisma suites are skipped. With `TEST_DATABASE_URL` (`npm run test:db`), `npm run test` runs everything with 0 skipped in Membership: users 19, schools 20, auth 77, membership 171, API e2e 52 (Prompt 02, local run).
 
-### Current Blockers
+## Governance
 
-- ⏸️ **Stakeholder Review Pending**: Architecture needs approval before domain/product implementation
-
-### Dependencies
-
-- Formal approval and stakeholder sign-off for ADR-0001 through ADR-0005
-- Runtime validation: schema/constraints, security controls, event contracts and load tests
-
----
-
-## Recent Changes
-
-### 2026-09-29
-
-- ✅ Completed ARCHITECTURE.md (comprehensive, 10 sections)
-- ✅ Defined consolidated bounded contexts and ownership in ADR-0002
-- ✅ Established naming conventions
-- ✅ Created ADR template
-- ✅ Planned scalability path (10K → 100K)
-- ✅ Set up memory system
-- ✅ Foundation Started
-- ✅ Foundation Bootstrap Completed: Next.js, Prisma foundation, Vitest, Playwright, quality tooling and CI skeleton
-- ⚠️ PostgreSQL connection/migration blocked locally: Docker daemon unavailable and localhost credentials mismatch
-
----
-
-## Decisions Made
-
-| Decision                      | ADR                | Status                                          |
-| ----------------------------- | ------------------ | ----------------------------------------------- |
-| Modular Monolith architecture | ADR-0001           | ✅ Accepted                                     |
-| Naming conventions            | In ARCHITECTURE.md | ✅ Proposed                                     |
-| Foundation bootstrap          | Stage 1 execution  | ✅ Completed; runtime validation recorded below |
-| DDD + Clean Architecture      | In ARCHITECTURE.md | ✅ Proposed                                     |
-| Scalability path              | In ARCHITECTURE.md | ✅ Proposed                                     |
-
----
-
-## Team Status
-
-| Role              | Person | Assignment     | Status          |
-| ----------------- | ------ | -------------- | --------------- |
-| Architecture Lead | TBD    | Foundation     | 🟡 Architecting |
-| Tech Lead         | TBD    | Implementation | 🔴 Not started  |
-| Backend Dev       | TBD    | Modules        | 🔴 Not started  |
-| Frontend Dev      | TBD    | UI/Components  | 🔴 Not started  |
-| DevOps            | TBD    | Infra/CI       | 🔴 Not started  |
-
----
-
-## Next Scheduled Actions
-
-1. **Stakeholder approval** (Pending)
-
-- ADR-0001 through ADR-0005
-- Security/privacy gates remain required
-
-2. **Database Modeling** (After approval)
-   - Entity diagrams
-   - Prisma schema
-   - Migration structure
-
-3. **Identity & Security** (After database foundation)
-
-- Auth.js, session registry and RBAC
-
----
-
-## Risks & Issues
-
-| ID  | Item                        | Severity | Status            | Owner     |
-| --- | --------------------------- | -------- | ----------------- | --------- |
-| R1  | Architecture complexity     | Medium   | Mitigated by docs | Arch      |
-| R2  | Monorepo setup time         | Medium   | Planned           | DevOps    |
-| R3  | Team unfamiliarity with DDD | Medium   | Training planned  | Tech Lead |
-
----
-
-## Achievements
-
-- ✅ Comprehensive architecture designed
-- ✅ Clear module boundaries established
-- ✅ Scalability strategy documented
-- ✅ ADR process established
-- ✅ Naming conventions standardized
-- ✅ Memory system implemented
-
----
-
-## Notes
-
-- Architecture document is comprehensive and ready for review
-- No code written yet (as per requirements)
-- Ready to proceed with implementation phase pending approval
+- Frontend decision: ADR-0005 ACTIVE; ADR-0006/0007/0008/0010 Superseded. See `docs/architecture/ADRs/ADR-INDEX.md`.
+- ADR-0001–0005 and 0009 remain `Proposed` (formal approval pending, not a P0).
+- MVP scope: `docs/product/MVP-SCOPE.md`.
+- No open P0 blockers for Prompts 02 and 03.

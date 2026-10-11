@@ -9,8 +9,16 @@ const GENERIC_MESSAGES: Record<MembershipErrorCode, string> = {
 };
 
 export class MembershipError extends Error {
-  constructor(readonly code: MembershipErrorCode) {
+  constructor(
+    readonly code: MembershipErrorCode,
+    /** True only for an authorization decision (403); false for MEM-005 caused by an unavailable dependency. */
+    readonly denied = false,
+  ) {
     super(GENERIC_MESSAGES[code]);
     this.name = 'MembershipError';
+  }
+
+  static accessDenied(): MembershipError {
+    return new MembershipError('MEM-005', true);
   }
 }

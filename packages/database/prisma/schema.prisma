@@ -121,3 +121,190 @@ model Grant {
 
   @@index([membershipId, roleId])
 }
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum SchoolStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  userId    String     @id
+  email     String     @unique
+  name      String
+  status    UserStatus
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+model School {
+  schoolId  String       @id
+  name      String
+  slug      String       @unique
+  status    SchoolStatus
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+enum TopicStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum QuestionLevel {
+  OBMEP_MIRIM
+  OBMEP_N1
+  OBMEP_N2
+  OBMEP_N3
+}
+
+enum QuestionStatus {
+  IMPORTED
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum AuthorType {
+  AUTHOR
+  ORGANIZATION
+  UNKNOWN
+}
+
+enum SourceType {
+  OLYMPIAD
+  EXAM
+  BOOK
+  INTERNAL
+  UNKNOWN
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ImageStatus {
+  PENDING
+  VALID
+  BROKEN
+  MISSING
+}
+
+model Topic {
+  topicId       String      @id
+  name          String
+  slug          String      @unique
+  description   String
+  status        TopicStatus
+  parentTopicId String?
+  parentTopic   Topic?      @relation("TopicHierarchy", fields: [parentTopicId], references: [topicId])
+  childTopics   Topic[]     @relation("TopicHierarchy")
+  createdAt     DateTime
+  updatedAt     DateTime
+}
+
+/// One row per (questionId, version). Content is immutable once published; isCurrent marks the latest version.
+model Question {
+  questionId      String
+  version         Int
+  title           String
+  statement       String
+  level           QuestionLevel
+  sourceName      String
+  sourceYear      Int?
+  sourceReference String?
+  sourceType      SourceType @default(UNKNOWN)
+  legacyId        String?
+  authorName      String     @default("Unknown")
+  authorType      AuthorType @default(UNKNOWN)
+  authorVerified  Boolean    @default(false)
+  gradeLevel      String?
+  difficulty      QuestionDifficulty?
+  explanation     String?
+  imageUrl        String?
+  imageStatus     ImageStatus @default(MISSING)
+  imageHash       String?
+  status          QuestionStatus
+  topicId         String
+  isCurrent       Boolean
+  createdAt       DateTime
+  updatedAt       DateTime
+  publishedAt     DateTime?
+  options         QuestionOption[]
+  tags            QuestionTag[]
+  examReferences  MockExamQuestion[]
+
+  @@id([questionId, version])
+  @@index([status, level, topicId])
+  @@index([isCurrent, status])
+  @@index([sourceName, sourceYear, sourceReference])
+  @@index([legacyId])
+}
+
+model QuestionTag {
+  questionId String
+  version    Int
+  tag        String
+  question   Question @relation(fields: [questionId, version], references: [questionId, version], onDelete: Cascade)
+
+  @@id([questionId, version, tag])
+  @@index([tag])
+}
+
+model QuestionOption {
+  optionId   String   @id
+  questionId String
+  version    Int
+  label      String
+  content    String
+  isCorrect  Boolean
+  question   Question @relation(fields: [questionId, version], references: [questionId, version], onDelete: Cascade)
+
+  @@unique([questionId, version, label])
+}
+
+enum MockExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model MockExam {
+  examId          String             @id
+  title           String
+  description     String?
+  schoolId        String
+  level           QuestionLevel
+  status          MockExamStatus
+  durationMinutes Int
+  availableFrom   DateTime?
+  availableUntil  DateTime?
+  createdAt       DateTime
+  updatedAt       DateTime
+  publishedAt     DateTime?
+  questions       MockExamQuestion[]
+
+  @@index([schoolId, status, availableFrom, availableUntil])
+}
+
+model MockExamQuestion {
+  examId          String
+  questionId      String
+  questionVersion Int
+  position        Int
+  exam            MockExam @relation(fields: [examId], references: [examId], onDelete: Cascade)
+  question        Question @relation(fields: [questionId, questionVersion], references: [questionId, version], onDelete: Restrict)
+
+  @@id([examId, position])
+  @@unique([examId, questionId])
+  @@index([questionId, questionVersion])
+}

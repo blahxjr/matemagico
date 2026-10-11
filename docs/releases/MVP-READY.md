@@ -43,4 +43,4 @@ Baseline oficial do MVP de identidade e acesso escolar do Matemagico. Esta relea
 
 ## Dívidas técnicas
 
-Veja [../backlog/TECH-DEBT.md](../backlog/TECH-DEBT.md).
+Veja [TECH-DEBT.md](../../TECH-DEBT.md).

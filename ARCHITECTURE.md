@@ -5,6 +5,8 @@
 **Versão**: 1.0.0  
 **Propriedade**: Arquitecture Team
 
+> **Estado atual (baseline, 2026-10-10)**: npm workspaces + Turborepo, Vitest, PostgreSQL/Prisma, API HTTP em `apps/api`. Auth, Membership, Users e Schools estão implementados (Prompt 02: portas reais e Argon2id; Prompt 03: Actor derivado da Session, autorização granular, Zod e OpenAPI 3.1). Prompt 04: `@matemagico/topics` e `@matemagico/questions`, banco versionado com versões publicadas imutáveis, importação JSON/CSV e ADR-0011. Prompt 05: `@matemagico/question-engine` e `@matemagico/mock-exams`; seleção determinística apenas de questões PUBLISHED/isCurrent, seleção sem repetição e falha por insuficiência; simulados guardam referências `(questionId, questionVersion)`, ficam imutáveis após publicar e só iniciam dentro da janela. `StartExam` não cria Attempt nem corrige respostas. A decisão de frontend vigente é o ADR-0005 (ver [ADR-INDEX](docs/architecture/ADRs/ADR-INDEX.md)). Menções a PNPM/Jest neste documento são histórico corrigido; escopo do MVP em [MVP-SCOPE](docs/product/MVP-SCOPE.md).
+
 ---
 
 ## 📋 Sumário Executivo
@@ -190,7 +192,7 @@ matemagico/
 ├── .env.example
 ├── .gitignore
 ├── turbo.json                        # Turbo repo config
-├── pnpm-workspace.yaml               # PNPM workspaces
+├── package.json                      # npm workspaces
 ├── docker-compose.yml                # Dev environment
 ├── package.json
 ├── README.md
@@ -721,7 +723,7 @@ docs/
 │
 ├── 🏗️ architecture/
 │   ├── ADRs/
-│   │   ├── ADR-0001 (embutido nesta seção do ARCHITECTURE.md)
+│   │   ├── ADR-0001-base-architecture.md (canônico; seção embutida é histórica)
 │   │   ├── ADR-0002-module-boundaries.md
 │   │   ├── ADR-0003-database-strategy.md
 │   │   ├── ADR-0004-authentication-authorization.md
@@ -987,10 +989,10 @@ None currently
 
 ## Strategic Decisions
 
-- **Monorepo Tool**: Turborepo + PNPM
+- **Monorepo Tool**: Turborepo + npm workspaces
 - **Deployment Target**: Vercel (web) + Railway/Neon (DB)
-- **Package Manager**: PNPM (faster, better disk usage)
-- **Testing Framework**: Jest + Playwright
+- **Package Manager**: npm 11 (`packageManager` em `package.json`)
+- **Testing Framework**: Vitest + Playwright
 
 ## Trade-offs Made
 
@@ -1122,7 +1124,7 @@ Cross-boundary: Via types package
 
 ## Medium Term (Month 1)
 
-- [ ] Set up Turborepo + PNPM
+- [x] Set up Turborepo + npm workspaces
 - [ ] Initialize GitHub CI/CD
 - [ ] Create dev environment setup
 - [ ] Establish linting & formatting rules
@@ -1142,9 +1144,11 @@ Cross-boundary: Via types package
 ### ADR-0001: Escolha da Arquitetura Base do MateMágico Champions
 
 **Date**: 2026-09-29  
-**Status**: Accepted  
+**Status**: Historical source; canonical status is Proposed (approval pending)
 **Deciders**: Architecture Team  
 **Affects**: All future architectural decisions
+
+> Este bloco e preservado como fonte historica. A referencia canonica atual e [ADR-0001-base-architecture.md](docs/architecture/ADRs/ADR-0001-base-architecture.md); o status Accepted abaixo nao comprova sign-off e nao e normativo para a baseline V1.
 
 ---
 
@@ -1785,8 +1789,7 @@ RESULTADO:
 ```json
 {
   "devDependencies": {
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.0",
+    "vitest": "^4.1.11",
     "@testing-library/react": "^14.1.0",
     "@testing-library/jest-dom": "^6.1.0",
     "playwright": "^1.40.0"
@@ -1794,11 +1797,11 @@ RESULTADO:
 }
 ```
 
-| Lib                 | Tipo             | Razão                                              |
-| ------------------- | ---------------- | -------------------------------------------------- |
-| **Jest**            | Unit/Integration | Industry standard, TypeScript support              |
-| **Testing Library** | React testing    | Best practices (test behavior, not implementation) |
-| **Playwright**      | E2E              | Cross-browser, fast, headless ready                |
+| Lib                 | Tipo             | Razão                                               |
+| ------------------- | ---------------- | --------------------------------------------------- |
+| **Vitest**          | Unit/Integration | Native TypeScript/ESM, fast, used in all workspaces |
+| **Testing Library** | React testing    | Best practices (test behavior, not implementation)  |
+| **Playwright**      | E2E              | Cross-browser, fast, headless ready                 |
 
 **Coverage Target:** 70% statements, 80% branches críticas
 
@@ -1905,7 +1908,6 @@ RESULTADO:
   "devDependencies": {
     "@types/node": "^20",
     "typescript": "^5.3.0",
-    "pnpm": "^8.0.0",
     "prettier": "^3.1.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "^15.0.0"

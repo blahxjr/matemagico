@@ -50,10 +50,10 @@ export class ActivateMembershipService {
 
     // The actor must administer the School of the Membership, never a client-supplied School.
     const authorized = await this.attempt(
-      () => this.deps.actorAuthorizer.canAdministerSchool(actor, membership.schoolId),
+      () => this.deps.actorAuthorizer.canActivateMembership(actor, membership.schoolId),
       'MEM-005',
     );
-    if (!authorized) throw new MembershipError('MEM-005');
+    if (!authorized) throw MembershipError.accessDenied();
 
     if (membership.state !== 'PENDING') throw new MembershipError('MEM-001');
 
