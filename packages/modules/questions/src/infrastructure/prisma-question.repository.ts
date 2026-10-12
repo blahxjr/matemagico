@@ -1,6 +1,13 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { Question, type QuestionLevel, type QuestionStatus } from '../domain/question';
-import type { AddQuestionResult, Page, QuestionFilter, QuestionRepository } from '../domain/ports';
+import { Question, type QuestionStatus } from '../domain/question';
+import { QuestionsError } from '../domain/questions-error';
+import type {
+  AddQuestionResult,
+  ImportExecutionRepository,
+  Page,
+  QuestionFilter,
+  QuestionRepository,
+} from '../domain/ports';
 
 type Row = Prisma.QuestionGetPayload<{ include: { options: true; tags: true } }>;
 
@@ -15,12 +22,13 @@ const restore = (row: Row): Question =>
     version: row.version,
     title: row.title,
     statement: row.statement,
-    level: row.level as QuestionLevel,
+    level: row.level,
     topicId: row.topicId,
     status: row.status as QuestionStatus,
     sourceName: row.sourceName,
     sourceYear: row.sourceYear,
     sourceReference: row.sourceReference,
+    sourceNotes: row.sourceNotes,
     sourceType: row.sourceType,
     legacyId: row.legacyId,
     authorName: row.authorName,
@@ -61,6 +69,7 @@ export class PrismaQuestionRepository implements QuestionRepository {
       sourceName: question.content.sourceName,
       sourceYear: question.content.sourceYear,
       sourceReference: question.content.sourceReference,
+      sourceNotes: question.content.sourceNotes,
       sourceType: question.content.sourceType,
       legacyId: question.content.legacyId,
       authorName: question.content.authorName,
@@ -139,52 +148,116 @@ export class PrismaQuestionRepository implements QuestionRepository {
   }
 
   async saveStatus(question: Question): Promise<void> {
-    await this.prisma.question.update({
-      where: { questionId_version: { questionId: question.id, version: question.version } },
+    const allowedPreviousStatuses: QuestionStatus[] =
+      question.status === 'IN_REVIEW'
+        ? ['IMPORTED', 'APPROVED', 'REJECTED']
+        : question.status === 'APPROVED' || question.status === 'REJECTED'
+          ? ['IN_REVIEW']
+          : [];
+    const result = await this.prisma.question.updateMany({
+      where: {
+        questionId: question.id,
+        version: question.version,
+        ...(question.status === 'ARCHIVED'
+          ? { status: { not: 'ARCHIVED' } }
+          : { status: { in: allowedPreviousStatuses }, isCurrent: true }),
+      },
       data: { status: question.status, updatedAt: question.updatedAt },
     });
+    if (result.count !== 1) throw new QuestionsError('QST-005');
   }
 
   async save(question: Question): Promise<void> {
-    await this.prisma.question.update({
-      where: { questionId_version: { questionId: question.id, version: question.version } },
-      data: {
-        ...this.data(question),
-        questionId: undefined,
-        version: undefined,
-        options: {
-          deleteMany: {},
-          create: question.options.map(({ optionId, label, content, isCorrect }) => ({
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.question.updateMany({
+        where: {
+          questionId: question.id,
+          version: question.version,
+          status: 'IN_REVIEW',
+          isCurrent: true,
+        },
+        data: {
+          title: question.content.title,
+          statement: question.content.statement,
+          level: question.content.level,
+          topicId: question.content.topicId,
+          status: question.status,
+          sourceName: question.content.sourceName,
+          sourceYear: question.content.sourceYear,
+          sourceReference: question.content.sourceReference,
+          sourceNotes: question.content.sourceNotes,
+          sourceType: question.content.sourceType,
+          legacyId: question.content.legacyId,
+          authorName: question.content.authorName,
+          authorType: question.content.authorType,
+          authorVerified: question.content.authorVerified,
+          gradeLevel: question.content.gradeLevel,
+          difficulty: question.content.difficulty,
+          explanation: question.content.explanation,
+          imageUrl: question.content.imageUrl,
+          imageStatus: question.content.imageStatus,
+          imageHash: question.content.imageHash,
+          updatedAt: question.updatedAt,
+          publishedAt: null,
+        },
+      });
+      if (result.count !== 1) throw new QuestionsError('QST-005');
+
+      await tx.questionOption.deleteMany({
+        where: { questionId: question.id, version: question.version },
+      });
+      if (question.options.length > 0) {
+        await tx.questionOption.createMany({
+          data: question.options.map(({ optionId, label, content, isCorrect }) => ({
             optionId,
+            questionId: question.id,
+            version: question.version,
             label,
             content,
             isCorrect,
           })),
-        },
-        tags: { deleteMany: {}, create: question.content.tags.map((tag) => ({ tag })) },
-      },
+        });
+      }
+      await tx.questionTag.deleteMany({
+        where: { questionId: question.id, version: question.version },
+      });
+      if (question.content.tags.length > 0) {
+        await tx.questionTag.createMany({
+          data: question.content.tags.map((tag) => ({
+            questionId: question.id,
+            version: question.version,
+            tag,
+          })),
+        });
+      }
     });
   }
 
   async publish(question: Question): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.question.updateMany({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.question.updateMany({
         where: {
           questionId: question.id,
           status: 'PUBLISHED',
           version: { not: question.version },
         },
         data: { status: 'ARCHIVED', updatedAt: question.updatedAt },
-      }),
-      this.prisma.question.update({
-        where: { questionId_version: { questionId: question.id, version: question.version } },
+      });
+      const result = await tx.question.updateMany({
+        where: {
+          questionId: question.id,
+          version: question.version,
+          status: 'APPROVED',
+          isCurrent: true,
+        },
         data: {
           status: 'PUBLISHED',
           publishedAt: question.publishedAt,
           updatedAt: question.updatedAt,
         },
-      }),
-    ]);
+      });
+      if (result.count !== 1) throw new QuestionsError('QST-005');
+    });
   }
 
   async list(filter: QuestionFilter, page: Page) {
@@ -195,6 +268,9 @@ export class PrismaQuestionRepository implements QuestionRepository {
       ...(filter.level ? { level: filter.level } : {}),
       ...(filter.topicId ? { topicId: filter.topicId } : {}),
       ...(filter.sourceYear !== undefined ? { sourceYear: filter.sourceYear } : {}),
+      ...(filter.gradeLevel ? { gradeLevel: filter.gradeLevel } : {}),
+      ...(filter.difficulty ? { difficulty: filter.difficulty } : {}),
+      ...(filter.sourceType ? { sourceType: filter.sourceType } : {}),
     };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.question.findMany({
@@ -219,15 +295,10 @@ export class PrismaQuestionRepository implements QuestionRepository {
   }
 
   async existsByFingerprint(fingerprint: string): Promise<boolean> {
-    const [statement, options, answer] = fingerprint.split('\u001f');
-    if (!statement || !options || !answer) return false;
-    const count = await this.prisma.question.count({
-      where: {
-        statement,
-        options: { every: { content: { in: options.split('\u001e') } } },
-      },
+    const rows = await this.prisma.question.findMany({
+      include: { options: { orderBy: { label: 'asc' } } },
     });
-    return count > 0;
+    return rows.some((row) => fingerprintFor(row.statement, row.options) === fingerprint);
   }
 
   async countByStatus(): Promise<Record<QuestionStatus, number>> {
@@ -239,4 +310,42 @@ export class PrismaQuestionRepository implements QuestionRepository {
       ]),
     ) as Record<QuestionStatus, number>;
   }
+}
+
+export class PrismaImportExecutionRepository implements ImportExecutionRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async record(input: {
+    importExecutionId: string;
+    sourceFileName: string | null;
+    worksheetName: string;
+    processed: number;
+    created: number;
+    duplicates: number;
+    errors: number;
+    createdAt: Date;
+  }): Promise<void> {
+    await this.prisma.importExecution.create({ data: input });
+  }
+
+  async totalDuplicates(): Promise<number> {
+    const total = await this.prisma.importExecution.aggregate({ _sum: { duplicates: true } });
+    return total._sum.duplicates ?? 0;
+  }
+}
+
+function normalizeFingerprintValue(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+}
+
+function fingerprintFor(
+  statement: string,
+  options: readonly { label: string; content: string; isCorrect: boolean }[],
+): string {
+  const normalizedOptions = [...options]
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .map((option) => `${option.label}:${normalizeFingerprintValue(option.content)}`)
+    .join('\u001e');
+  const answer = options.find((option) => option.isCorrect)?.label ?? '';
+  return [normalizeFingerprintValue(statement), normalizedOptions, answer].join('\u001f');
 }

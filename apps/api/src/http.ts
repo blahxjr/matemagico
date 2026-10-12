@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 
 export const MAX_BODY_BYTES = 32 * 1024;
+export const MAX_XLSX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export function sendJson(
   res: ServerResponse,
@@ -28,7 +29,24 @@ async function readRaw(req: IncomingMessage): Promise<string> {
     if (size > MAX_BODY_BYTES) throw new InvalidBodyError();
     chunks.push(chunk as Buffer);
   }
+
   return Buffer.concat(chunks).toString('utf8');
+}
+
+export async function readBuffer(
+  req: IncomingMessage,
+  maxBytes = MAX_XLSX_UPLOAD_BYTES,
+): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > maxBytes) throw new InvalidBodyError();
+    chunks.push(buffer);
+  }
+  if (size === 0) throw new InvalidBodyError();
+  return Buffer.concat(chunks);
 }
 
 /**

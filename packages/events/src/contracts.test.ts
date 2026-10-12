@@ -36,11 +36,31 @@ const roleGranted: DomainEvent = {
     grantedBy: 'admin-1',
   },
 };
+const attemptCompleted: DomainEvent = {
+  eventId: 'event-attempt-1',
+  eventName: 'AttemptCompleted',
+  aggregateId: 'attempt-1',
+  aggregateType: 'Attempt',
+  occurredAt: '2026-10-11T12:00:00.000Z',
+  schemaVersion: 1,
+  correlationId: 'request-3',
+  causationId: 'command-3',
+  schoolId: 'school-1',
+  payload: {
+    attemptId: 'attempt-1',
+    userId: 'user-1',
+    schoolId: 'school-1',
+    examId: 'exam-1',
+    score: 80,
+    percentage: 80,
+  },
+};
 
 describe('Membership event contracts', () => {
   it.each([
     ['MembershipCreated', membershipCreated],
     ['RoleGranted', roleGranted],
+    ['AttemptCompleted', attemptCompleted],
   ])('accepts a valid %s event', (_name, event) => {
     expect(() => assertEventContract(event)).not.toThrow();
   });

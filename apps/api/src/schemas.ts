@@ -101,11 +101,44 @@ const questionContent = {
   sourceName: z.string().trim().min(1).max(120),
   sourceYear: z.number().int().min(1900).max(2100).nullable().optional(),
   sourceReference: z.string().trim().max(200).nullable().optional(),
+  sourceNotes: z.string().trim().max(2000).nullable().optional(),
   options: z.array(optionBody).min(2).max(5),
+  sourceType: z.enum(['OLYMPIAD', 'EXAM', 'BOOK', 'INTERNAL', 'UNKNOWN']).optional(),
+  legacyId: z.string().trim().max(128).nullable().optional(),
+  authorName: z.string().trim().min(1).max(200).optional(),
+  authorType: z.enum(['AUTHOR', 'ORGANIZATION', 'UNKNOWN']).optional(),
+  authorVerified: z.boolean().optional(),
+  gradeLevel: z.string().trim().max(50).nullable().optional(),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).nullable().optional(),
+  explanation: z.string().trim().max(10000).nullable().optional(),
+  imageUrl: z.string().trim().url().max(2048).nullable().optional(),
+  imageStatus: z.enum(['PENDING', 'VALID', 'BROKEN', 'MISSING']).optional(),
+  imageHash: z.string().trim().max(128).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(80)).max(100).optional(),
 };
 export const createQuestionBody = strict({ schoolId: idSchema, ...questionContent });
 export const versionQuestionBody = strict({ schoolId: idSchema, ...questionContent });
 export const questionActionBody = strict({ schoolId: idSchema });
+export const rejectQuestionBody = strict({
+  schoolId: idSchema,
+  reason: z.string().trim().min(1).max(2000),
+});
+export const updateQuestionBody = strict({ schoolId: idSchema, ...questionContent });
+export const xlsxImportHeaders = strict({
+  schoolId: idSchema,
+  fileName: z.string().trim().min(1).max(255).optional(),
+});
+export const questionReviewQuery = strict({
+  schoolId: idSchema,
+  status: z.enum(QUESTION_STATUSES).optional(),
+  topicId: idSchema.optional(),
+  gradeLevel: z.string().trim().min(1).max(50).optional(),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
+  sourceType: z.enum(['OLYMPIAD', 'EXAM', 'BOOK', 'INTERNAL', 'UNKNOWN']).optional(),
+  limit: intQuery.optional(),
+  offset: intQuery.optional(),
+});
+export const editorialDashboardQuery = strict({ schoolId: idSchema });
 export const questionListQuery = strict({
   schoolId: idSchema.optional(),
   level: z.enum(QUESTION_LEVELS).optional(),
@@ -135,12 +168,25 @@ export const questionResponse = strict({
   version: z.number().int(),
   title: z.string(),
   statement: z.string(),
-  level: z.enum(QUESTION_LEVELS),
+  level: z.enum(QUESTION_LEVELS).nullable(),
   status: z.enum(QUESTION_STATUSES),
   topicId: z.string(),
   sourceName: z.string(),
   sourceYear: z.number().int().nullable(),
   sourceReference: z.string().nullable(),
+  sourceNotes: z.string().nullable(),
+  sourceType: z.enum(['OLYMPIAD', 'EXAM', 'BOOK', 'INTERNAL', 'UNKNOWN']),
+  legacyId: z.string().nullable(),
+  authorName: z.string(),
+  authorType: z.enum(['AUTHOR', 'ORGANIZATION', 'UNKNOWN']),
+  authorVerified: z.boolean(),
+  gradeLevel: z.string().nullable(),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).nullable(),
+  explanation: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  imageStatus: z.enum(['PENDING', 'VALID', 'BROKEN', 'MISSING']),
+  imageHash: z.string().nullable(),
+  tags: z.array(z.string()),
   options: z.array(
     strict({
       optionId: z.string(),
@@ -158,6 +204,14 @@ export const questionListResponse = strict({
   total: z.number().int(),
   limit: z.number().int(),
   offset: z.number().int(),
+});
+export const editorialDashboardResponse = strict({
+  imported: z.number().int(),
+  inReview: z.number().int(),
+  approved: z.number().int(),
+  published: z.number().int(),
+  rejected: z.number().int(),
+  duplicates: z.number().int(),
 });
 
 // ---- Mock Exams --------------------------------------------------------------------------
@@ -210,4 +264,56 @@ export const startExamResponse = strict({
   examId: z.string(),
   title: z.string(),
   questions: mockExamResponse.shape.questions,
+});
+
+// ---- Attempts -----------------------------------------------------------------------------
+export const startAttemptBody = strict({ schoolId: idSchema });
+export const submitAnswerBody = strict({
+  schoolId: idSchema,
+  questionId: idSchema,
+  selectedOption: z.enum(['A', 'B', 'C', 'D', 'E']),
+});
+export const attemptActionBody = strict({ schoolId: idSchema });
+const attemptQuestionResponse = strict({
+  questionId: z.string(),
+  questionVersion: z.number().int(),
+  position: z.number().int(),
+  topicId: z.string(),
+  title: z.string(),
+  statement: z.string(),
+  options: z.array(strict({ label: z.string(), content: z.string() })),
+});
+export const attemptResponse = strict({
+  attemptId: z.string(),
+  schoolId: z.string(),
+  userId: z.string(),
+  examId: z.string(),
+  title: z.string(),
+  status: z.enum(['IN_PROGRESS', 'SUBMITTED', 'EXPIRED']),
+  startedAt: z.string(),
+  expiresAt: z.string(),
+  submittedAt: z.string().nullable(),
+  questions: z.array(attemptQuestionResponse),
+  answers: z.array(
+    strict({
+      questionId: z.string(),
+      questionVersion: z.number().int(),
+      selectedOption: z.string(),
+      answeredAt: z.string(),
+    }),
+  ),
+  result: strict({
+    score: z.number(),
+    correctAnswers: z.number().int(),
+    totalQuestions: z.number().int(),
+    percentage: z.number(),
+    topicResults: z.record(
+      z.string(),
+      strict({
+        correctAnswers: z.number().int(),
+        totalQuestions: z.number().int(),
+        percentage: z.number(),
+      }),
+    ),
+  }).nullable(),
 });

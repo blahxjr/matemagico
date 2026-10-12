@@ -2369,8 +2369,18 @@ _________________________________
 
 ---
 
+## Current Question Editorial Boundary (Prompt 04.1)
+
+The operational question lifecycle is `IMPORTED -> IN_REVIEW -> APPROVED -> PUBLISHED`; imports
+never publish automatically. Editorial uploads, correction rules, approval checks, image validation,
+and routes are documented in [docs/questions/EDITORIAL-PIPELINE.md](docs/questions/EDITORIAL-PIPELINE.md).
+Published versions are immutable, and both domain and Prisma transitions enforce the approval gate.
+The question bank remains global: `schoolId` authorizes an editor but does not partition content.
+Real OBMEP data must not be persisted or published until written content permission is recorded in
+ADR-0011.
+
 **END OF ARCHITECTURE DOCUMENT**
 
-_Last Updated: 2026-09-29_  
+_Last Updated: 2026-10-11_
 _Version: 1.0.0_  
 _Status: Foundation Architecture Complete_

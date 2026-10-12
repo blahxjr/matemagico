@@ -3,10 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import { createCompositionRoot } from '@matemagico/composition-root';
 
 /**
- * Imports questions into the bank (DRAFT unless --publish). Idempotent: rows with the same
- * (sourceName, sourceYear, sourceReference) are skipped. Format: docs/questions/IMPORT-FORMAT.md
+ * Imports questions into editorial review only. No imported question is published by this CLI.
  *
- *   npm run questions:import -- --format json|csv --file <path> [--publish]
+ *   npm run questions:import -- --format json|csv|xlsx --file <path>
  */
 const args = process.argv.slice(2);
 const option = (name: string) => {
@@ -17,19 +16,21 @@ const option = (name: string) => {
 async function main(): Promise<void> {
   const format = option('format');
   const file = option('file');
-  if ((format !== 'json' && format !== 'csv') || !file) {
-    throw new Error('Usage: --format json|csv --file <path> [--publish]');
+  if ((format !== 'json' && format !== 'csv' && format !== 'xlsx') || !file) {
+    throw new Error('Usage: --format json|csv|xlsx --file <path>');
   }
   const prisma = new PrismaClient();
   try {
     const { services } = createCompositionRoot(prisma);
-    const report = await services.importQuestions.execute({
-      format,
-      payload: readFileSync(file, 'utf8'),
-      publish: args.includes('--publish'),
-    });
+    const report =
+      format === 'xlsx'
+        ? await services.importQuestionsFromXlsx.execute({
+            buffer: readFileSync(file),
+            fileName: file,
+          })
+        : await services.importQuestions.execute({ format, payload: readFileSync(file, 'utf8') });
     console.log(JSON.stringify(report));
-    if (report.failed.length > 0) process.exitCode = 1;
+    if (('failed' in report ? report.failed.length : report.errors) > 0) process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
   }

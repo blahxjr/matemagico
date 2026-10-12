@@ -8,6 +8,7 @@ export interface TopicView {
   readonly slug: string;
   readonly description: string;
   readonly status: TopicStatus;
+  readonly parentTopicId: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -18,6 +19,7 @@ const toView = (topic: Topic): TopicView => ({
   slug: topic.slug,
   description: topic.description,
   status: topic.status,
+  parentTopicId: topic.parentTopicId,
   createdAt: topic.createdAt,
   updatedAt: topic.updatedAt,
 });
@@ -38,12 +40,18 @@ export class CreateTopicService {
     private readonly deps: { topics: TopicRepository; clock: Clock; ids: TopicIdGenerator },
   ) {}
 
-  async execute(input: { name: string; slug: string; description?: string }): Promise<TopicView> {
+  async execute(input: {
+    name: string;
+    slug: string;
+    description?: string;
+    parentTopicId?: string;
+  }): Promise<TopicView> {
     const topic = Topic.create({
       topicId: this.deps.ids.next(),
       name: input?.name,
       slug: input?.slug,
       description: input?.description,
+      parentTopicId: input?.parentTopicId,
       now: this.deps.clock.now(),
     });
     const existing = await guard(() => this.deps.topics.findBySlug(topic.slug));

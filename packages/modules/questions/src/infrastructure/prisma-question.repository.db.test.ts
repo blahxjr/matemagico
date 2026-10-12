@@ -19,8 +19,10 @@ describe.skipIf(!prisma)('PrismaQuestionRepository', () => {
       level,
       topicId,
       sourceName: `SRC-${run}`,
+      sourceType: 'INTERNAL',
       sourceYear: 2024,
       sourceReference: ref,
+      explanation: 'Explicação validada.',
       options: [
         { label: 'A', content: '1', isCorrect: true },
         { label: 'B', content: '2', isCorrect: false },
@@ -57,12 +59,18 @@ describe.skipIf(!prisma)('PrismaQuestionRepository', () => {
       }),
     ).toBe(false);
 
-    await repo.publish(q1.publish(now));
-    const v2 = Question.create({
-      questionId: `q1-version-${run}`,
-      content: content('v2', 'R1'),
-      now,
-    });
+    const v1InReview = q1.startReview(now);
+    await repo.saveStatus(v1InReview);
+    const approvedV1 = v1InReview.approve(now);
+    await repo.saveStatus(approvedV1);
+    const publishedV1 = approvedV1.publish(now);
+    await repo.publish(publishedV1);
+    await expect(repo.saveStatus(approvedV1)).rejects.toMatchObject({ code: 'QST-005' });
+    await expect(repo.save(v1InReview.update(content('mutated', 'R1'), now))).rejects.toMatchObject(
+      { code: 'QST-005' },
+    );
+    expect((await repo.findVersion(q1.id, 1))?.content.title).toBe('v1');
+    const v2 = publishedV1.nextVersion(content('v2', 'R1'), now);
     expect(await repo.addVersion(v2)).toBe('CREATED');
     expect(await repo.addVersion(v2)).toBe('CONFLICT');
 
@@ -71,7 +79,11 @@ describe.skipIf(!prisma)('PrismaQuestionRepository', () => {
     expect((await repo.findVersion(q1.id, 1))?.options).toHaveLength(2);
     expect(await repo.findVersion(q1.id, 9)).toBeNull();
 
-    await repo.publish(v2.publish(now));
+    const v2InReview = v2.startReview(now);
+    await repo.saveStatus(v2InReview);
+    const approvedV2 = v2InReview.approve(now);
+    await repo.saveStatus(approvedV2);
+    await repo.publish(approvedV2.publish(now));
     expect((await repo.findPublished(q1.id))?.version).toBe(2);
     expect((await repo.findVersion(q1.id, 1))?.status).toBe('ARCHIVED');
 

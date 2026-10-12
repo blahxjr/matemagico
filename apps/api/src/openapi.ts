@@ -1,12 +1,16 @@
 import { z } from 'zod';
 import {
   activateMembershipBody,
+  attemptActionBody,
+  attemptResponse,
   createMembershipBody,
   createMockExamBody,
   createQuestionBody,
   createSchoolBody,
   createTopicBody,
   errorResponse,
+  editorialDashboardQuery,
+  editorialDashboardResponse,
   grantCreatedResponse,
   grantRoleBody,
   loginBody,
@@ -18,7 +22,9 @@ import {
   questionGetQuery,
   questionListQuery,
   questionListResponse,
+  questionReviewQuery,
   questionResponse,
+  rejectQuestionBody,
   mockExamActionBody,
   mockExamGetQuery,
   mockExamListQuery,
@@ -29,12 +35,16 @@ import {
   schoolResponse,
   sessionResponse,
   startExamResponse,
+  startAttemptBody,
+  submitAnswerBody,
   topicGetQuery,
   topicListQuery,
   topicListResponse,
   topicResponse,
   updateTopicBody,
+  updateQuestionBody,
   versionQuestionBody,
+  xlsxImportHeaders,
 } from './schemas';
 
 const json = (schema: z.ZodType) => ({
@@ -269,7 +279,7 @@ export function buildOpenApiDocument() {
           },
         },
         post: {
-          summary: 'Create a DRAFT question (requires question:create in schoolId)',
+          summary: 'Create an IMPORTED question (requires question:create in schoolId)',
           security: secured,
           requestBody: { required: true, content: json(createQuestionBody) },
           responses: {
@@ -283,6 +293,75 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/questions/import/xlsx': {
+        post: {
+          summary:
+            'Import an XLSX worksheet into editorial status IMPORTED; never publishes during import',
+          security: secured,
+          parameters: [
+            {
+              name: 'x-school-id',
+              in: 'header',
+              required: true,
+              schema: z.toJSONSchema(xlsxImportHeaders.shape.schoolId, {
+                io: 'input',
+                unrepresentable: 'any',
+              }),
+            },
+            {
+              name: 'x-file-name',
+              in: 'header',
+              required: false,
+              schema: z.toJSONSchema(xlsxImportHeaders.shape.fileName, {
+                io: 'input',
+                unrepresentable: 'any',
+              }),
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+                schema: { type: 'string', format: 'binary' },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Import result; each row is CREATED, DUPLICATE, or ERROR',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+            ...errors(
+              [400, 'INVALID_REQUEST / QST-001 / QST-007'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [503, 'QST-006'],
+            ),
+          },
+        },
+      },
+      '/questions/review': {
+        get: {
+          summary: 'List imported questions for editorial review',
+          security: secured,
+          parameters: [...queryParams(questionReviewQuery)],
+          responses: {
+            '200': { description: 'Editorial queue', content: json(questionListResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
+      '/questions/editorial-dashboard': {
+        get: {
+          summary: 'Editorial counts by status and duplicate imports',
+          security: secured,
+          parameters: [...queryParams(editorialDashboardQuery)],
+          responses: {
+            '200': { description: 'Editorial metrics', content: json(editorialDashboardResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
       '/questions/{questionId}': {
         get: {
           summary: 'Read a question (published version for readers; any version for authors)',
@@ -293,10 +372,74 @@ export function buildOpenApiDocument() {
             ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'QST-002']),
           },
         },
+        patch: {
+          summary: 'Update an imported or in-review question (requires question:update)',
+          security: secured,
+          parameters: [idParam('questionId')],
+          requestBody: { required: true, content: json(updateQuestionBody) },
+          responses: {
+            '200': { description: 'Updated', content: json(questionResponse) },
+            ...errors(
+              [400, 'INVALID_REQUEST / QST-001'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [404, 'QST-002'],
+              [409, 'QST-005'],
+            ),
+          },
+        },
+      },
+      '/questions/{questionId}/review': {
+        post: {
+          summary: 'Move an imported question to editorial review',
+          security: secured,
+          parameters: [idParam('questionId')],
+          requestBody: { required: true, content: json(questionActionBody) },
+          responses: {
+            '200': { description: 'In review', content: json(questionResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'QST-002'], [409, 'QST-005']),
+          },
+        },
+      },
+      '/questions/{questionId}/approve': {
+        post: {
+          summary: 'Approve an in-review question',
+          security: secured,
+          parameters: [idParam('questionId')],
+          requestBody: { required: true, content: json(questionActionBody) },
+          responses: {
+            '200': { description: 'Approved', content: json(questionResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'QST-002'], [409, 'QST-005']),
+          },
+        },
+      },
+      '/questions/{questionId}/reject': {
+        post: {
+          summary: 'Reject an in-review question',
+          security: secured,
+          parameters: [idParam('questionId')],
+          requestBody: { required: true, content: json(rejectQuestionBody) },
+          responses: {
+            '200': { description: 'Rejected', content: json(questionResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'QST-002'], [409, 'QST-005']),
+          },
+        },
+      },
+      '/questions/{questionId}/return-to-review': {
+        post: {
+          summary: 'Return an approved or rejected question to review',
+          security: secured,
+          parameters: [idParam('questionId')],
+          requestBody: { required: true, content: json(questionActionBody) },
+          responses: {
+            '200': { description: 'In review', content: json(questionResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'QST-002'], [409, 'QST-005']),
+          },
+        },
       },
       '/questions/{questionId}/publish': {
         post: {
-          summary: 'Publish the current DRAFT (requires question:publish in schoolId)',
+          summary: 'Publish only an APPROVED question (requires question:publish in schoolId)',
           security: secured,
           parameters: [idParam('questionId')],
           requestBody: { required: true, content: json(questionActionBody) },
@@ -325,7 +468,8 @@ export function buildOpenApiDocument() {
       },
       '/questions/{questionId}/version': {
         post: {
-          summary: 'Create version N+1 as a DRAFT; published versions are never mutated',
+          summary:
+            'Create version N+1 as IMPORTED for editorial review; published versions are immutable',
           security: secured,
           parameters: [idParam('questionId')],
           requestBody: { required: true, content: json(versionQuestionBody) },
@@ -418,6 +562,66 @@ export function buildOpenApiDocument() {
               content: json(startExamResponse),
             },
             ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'EXM-002'], [409, 'EXM-005']),
+          },
+        },
+      },
+      '/exams/{examId}/attempts': {
+        post: {
+          summary: 'Start or idempotently resume an attempt for the authenticated learner',
+          security: secured,
+          parameters: [idParam('examId')],
+          requestBody: { required: true, content: json(startAttemptBody) },
+          responses: {
+            '201': { description: 'Attempt', content: json(attemptResponse) },
+            ...errors(
+              [400, 'INVALID_REQUEST / ATT-001'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [404, 'ATT-002'],
+              [409, 'ATT-003 / ATT-004'],
+            ),
+          },
+        },
+      },
+      '/attempts/{attemptId}/answers': {
+        post: {
+          summary: 'Submit or replace an answer in an active attempt',
+          security: secured,
+          parameters: [idParam('attemptId')],
+          requestBody: { required: true, content: json(submitAnswerBody) },
+          responses: {
+            '200': { description: 'Attempt', content: json(attemptResponse) },
+            ...errors(
+              [400, 'INVALID_REQUEST / ATT-001'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [404, 'ATT-002'],
+              [409, 'ATT-003 / ATT-004'],
+            ),
+          },
+        },
+      },
+      '/attempts/{attemptId}/finish': {
+        post: {
+          summary: 'Finish and automatically correct an attempt',
+          security: secured,
+          parameters: [idParam('attemptId')],
+          requestBody: { required: true, content: json(attemptActionBody) },
+          responses: {
+            '200': { description: 'Final result', content: json(attemptResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'ATT-002']),
+          },
+        },
+      },
+      '/attempts/{attemptId}/expire': {
+        post: {
+          summary: 'Expire an active attempt and persist its partial result',
+          security: secured,
+          parameters: [idParam('attemptId')],
+          requestBody: { required: true, content: json(attemptActionBody) },
+          responses: {
+            '200': { description: 'Expired result', content: json(attemptResponse) },
+            ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'ATT-002']),
           },
         },
       },

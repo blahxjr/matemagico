@@ -25,7 +25,11 @@ export class PrismaQuestionCatalog implements QuestionCatalog {
       },
       orderBy: [{ questionId: 'asc' }],
     });
-    return rows.map((row) => ({
+    const rowsWithLevel = rows.filter(
+      (row): row is (typeof rows)[number] & { level: NonNullable<(typeof row)['level']> } =>
+        row.level !== null,
+    );
+    return rowsWithLevel.map((row) => ({
       questionId: row.questionId,
       questionVersion: row.version,
       level: row.level,

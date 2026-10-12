@@ -33,7 +33,20 @@ export type RoleGrantedEvent = EventEnvelope & {
   };
 };
 
-export type DomainEvent = MembershipCreatedEvent | RoleGrantedEvent;
+export type AttemptCompletedEvent = EventEnvelope & {
+  eventName: 'AttemptCompleted';
+  aggregateType: 'Attempt';
+  payload: {
+    attemptId: string;
+    userId: string;
+    schoolId: string;
+    examId: string;
+    score: number;
+    percentage: number;
+  };
+};
+
+export type DomainEvent = MembershipCreatedEvent | RoleGrantedEvent | AttemptCompletedEvent;
 
 export class EventContractError extends Error {
   constructor(message: string) {
@@ -110,6 +123,7 @@ const validatePayload = (eventName: string, payload: Record<string, unknown>): v
   const requiredFields: Record<string, string[]> = {
     MembershipCreated: ['membershipId', 'userId', 'schoolId'],
     RoleGranted: ['grantId', 'membershipId', 'roleId', 'schoolId', 'grantedBy'],
+    AttemptCompleted: ['attemptId', 'userId', 'schoolId', 'examId'],
   };
   const fields = requiredFields[eventName];
   if (!fields) throw new EventContractError(`Unsupported eventName: ${eventName}`);
@@ -156,6 +170,19 @@ export function assertEventContract(value: unknown): asserts value is DomainEven
     }
     if (aggregateId !== value.payload.grantId) {
       throw new EventContractError('RoleGranted aggregateId must match payload.grantId');
+    }
+  } else if (eventName === 'AttemptCompleted') {
+    if (aggregateType !== 'Attempt')
+      throw new EventContractError('AttemptCompleted aggregateType must be Attempt');
+    if (aggregateId !== value.payload.attemptId)
+      throw new EventContractError('AttemptCompleted aggregateId must match payload.attemptId');
+    if (
+      typeof value.payload.score !== 'number' ||
+      !Number.isFinite(value.payload.score) ||
+      typeof value.payload.percentage !== 'number' ||
+      !Number.isFinite(value.payload.percentage)
+    ) {
+      throw new EventContractError('AttemptCompleted score and percentage must be finite numbers');
     }
   } else {
     throw new EventContractError(`Unsupported eventName: ${eventName}`);

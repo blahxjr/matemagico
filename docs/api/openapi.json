@@ -2096,7 +2096,7 @@
             "schema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "type": "string",
-              "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+              "enum": ["IMPORTED", "IN_REVIEW", "APPROVED", "PUBLISHED", "REJECTED", "ARCHIVED"]
             }
           },
           {
@@ -2159,12 +2159,26 @@
                             "type": "string"
                           },
                           "level": {
-                            "type": "string",
-                            "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "status": {
                             "type": "string",
-                            "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                            "enum": [
+                              "IMPORTED",
+                              "IN_REVIEW",
+                              "APPROVED",
+                              "PUBLISHED",
+                              "REJECTED",
+                              "ARCHIVED"
+                            ]
                           },
                           "topicId": {
                             "type": "string"
@@ -2186,6 +2200,59 @@
                           },
                           "sourceReference": {
                             "type": ["string", "null"]
+                          },
+                          "sourceNotes": {
+                            "type": ["string", "null"]
+                          },
+                          "sourceType": {
+                            "type": "string",
+                            "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                          },
+                          "legacyId": {
+                            "type": ["string", "null"]
+                          },
+                          "authorName": {
+                            "type": "string"
+                          },
+                          "authorType": {
+                            "type": "string",
+                            "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                          },
+                          "authorVerified": {
+                            "type": "boolean"
+                          },
+                          "gradeLevel": {
+                            "type": ["string", "null"]
+                          },
+                          "difficulty": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["EASY", "MEDIUM", "HARD"]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "explanation": {
+                            "type": ["string", "null"]
+                          },
+                          "imageUrl": {
+                            "type": ["string", "null"]
+                          },
+                          "imageStatus": {
+                            "type": "string",
+                            "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                          },
+                          "imageHash": {
+                            "type": ["string", "null"]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           },
                           "options": {
                             "type": "array",
@@ -2230,6 +2297,19 @@
                           "sourceName",
                           "sourceYear",
                           "sourceReference",
+                          "sourceNotes",
+                          "sourceType",
+                          "legacyId",
+                          "authorName",
+                          "authorType",
+                          "authorVerified",
+                          "gradeLevel",
+                          "difficulty",
+                          "explanation",
+                          "imageUrl",
+                          "imageStatus",
+                          "imageHash",
+                          "tags",
                           "options",
                           "createdAt",
                           "updatedAt",
@@ -2338,7 +2418,7 @@
         }
       },
       "post": {
-        "summary": "Create a DRAFT question (requires question:create in schoolId)",
+        "summary": "Create an IMPORTED question (requires question:create in schoolId)",
         "security": [
           {
             "sessionToken": []
@@ -2404,6 +2484,17 @@
                       }
                     ]
                   },
+                  "sourceNotes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "options": {
                     "minItems": 2,
                     "maxItems": 5,
@@ -2426,6 +2517,102 @@
                       },
                       "required": ["label", "content", "isCorrect"],
                       "additionalProperties": false
+                    }
+                  },
+                  "sourceType": {
+                    "type": "string",
+                    "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                  },
+                  "legacyId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "authorName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "authorType": {
+                    "type": "string",
+                    "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                  },
+                  "authorVerified": {
+                    "type": "boolean"
+                  },
+                  "gradeLevel": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 50
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "difficulty": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["EASY", "MEDIUM", "HARD"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "explanation": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageStatus": {
+                    "type": "string",
+                    "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                  },
+                  "imageHash": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tags": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
                     }
                   }
                 },
@@ -2467,12 +2654,26 @@
                       "type": "string"
                     },
                     "level": {
-                      "type": "string",
-                      "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
                     },
                     "topicId": {
                       "type": "string"
@@ -2494,6 +2695,59 @@
                     },
                     "sourceReference": {
                       "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "options": {
                       "type": "array",
@@ -2538,6 +2792,19 @@
                     "sourceName",
                     "sourceYear",
                     "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
                     "options",
                     "createdAt",
                     "updatedAt",
@@ -2651,6 +2918,696 @@
         }
       }
     },
+    "/questions/import/xlsx": {
+      "post": {
+        "summary": "Import an XLSX worksheet into editorial status IMPORTED; never publishes during import",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-school-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "x-file-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import result; each row is CREATED, DUPLICATE, or ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST / QST-001 / QST-007",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "QST-006",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/review": {
+      "get": {
+        "summary": "List imported questions for editorial review",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schoolId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "enum": ["IMPORTED", "IN_REVIEW", "APPROVED", "PUBLISHED", "REJECTED", "ARCHIVED"]
+            }
+          },
+          {
+            "name": "topicId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "gradeLevel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "enum": ["EASY", "MEDIUM", "HARD"]
+            }
+          },
+          {
+            "name": "sourceType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^\\d{1,9}$"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^\\d{1,9}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Editorial queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "statement": {
+                            "type": "string"
+                          },
+                          "level": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "IMPORTED",
+                              "IN_REVIEW",
+                              "APPROVED",
+                              "PUBLISHED",
+                              "REJECTED",
+                              "ARCHIVED"
+                            ]
+                          },
+                          "topicId": {
+                            "type": "string"
+                          },
+                          "sourceName": {
+                            "type": "string"
+                          },
+                          "sourceYear": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sourceReference": {
+                            "type": ["string", "null"]
+                          },
+                          "sourceNotes": {
+                            "type": ["string", "null"]
+                          },
+                          "sourceType": {
+                            "type": "string",
+                            "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                          },
+                          "legacyId": {
+                            "type": ["string", "null"]
+                          },
+                          "authorName": {
+                            "type": "string"
+                          },
+                          "authorType": {
+                            "type": "string",
+                            "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                          },
+                          "authorVerified": {
+                            "type": "boolean"
+                          },
+                          "gradeLevel": {
+                            "type": ["string", "null"]
+                          },
+                          "difficulty": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["EASY", "MEDIUM", "HARD"]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "explanation": {
+                            "type": ["string", "null"]
+                          },
+                          "imageUrl": {
+                            "type": ["string", "null"]
+                          },
+                          "imageStatus": {
+                            "type": "string",
+                            "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                          },
+                          "imageHash": {
+                            "type": ["string", "null"]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "optionId": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                },
+                                "isCorrect": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": ["optionId", "label", "content"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          },
+                          "publishedAt": {
+                            "type": ["string", "null"]
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "version",
+                          "title",
+                          "statement",
+                          "level",
+                          "status",
+                          "topicId",
+                          "sourceName",
+                          "sourceYear",
+                          "sourceReference",
+                          "sourceNotes",
+                          "sourceType",
+                          "legacyId",
+                          "authorName",
+                          "authorType",
+                          "authorVerified",
+                          "gradeLevel",
+                          "difficulty",
+                          "explanation",
+                          "imageUrl",
+                          "imageStatus",
+                          "imageHash",
+                          "tags",
+                          "options",
+                          "createdAt",
+                          "updatedAt",
+                          "publishedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["items", "total", "limit", "offset"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/editorial-dashboard": {
+      "get": {
+        "summary": "Editorial counts by status and duplicate imports",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schoolId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Editorial metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "inReview": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "approved": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "published": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "rejected": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "duplicates": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "imported",
+                    "inReview",
+                    "approved",
+                    "published",
+                    "rejected",
+                    "duplicates"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/questions/{questionId}": {
       "get": {
         "summary": "Read a question (published version for readers; any version for authors)",
@@ -2714,12 +3671,26 @@
                       "type": "string"
                     },
                     "level": {
-                      "type": "string",
-                      "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
                     },
                     "topicId": {
                       "type": "string"
@@ -2741,6 +3712,59 @@
                     },
                     "sourceReference": {
                       "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "options": {
                       "type": "array",
@@ -2785,6 +3809,19 @@
                     "sourceName",
                     "sourceYear",
                     "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
                     "options",
                     "createdAt",
                     "updatedAt",
@@ -2871,11 +3908,1855 @@
             }
           }
         }
+      },
+      "patch": {
+        "summary": "Update an imported or in-review question (requires question:update)",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "statement": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                  },
+                  "topicId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "sourceName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "sourceYear": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1900,
+                        "maximum": 2100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sourceReference": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sourceNotes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "options": {
+                    "minItems": 2,
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "enum": ["A", "B", "C", "D", "E"]
+                        },
+                        "content": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "isCorrect": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["label", "content", "isCorrect"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "sourceType": {
+                    "type": "string",
+                    "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                  },
+                  "legacyId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "authorName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "authorType": {
+                    "type": "string",
+                    "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                  },
+                  "authorVerified": {
+                    "type": "boolean"
+                  },
+                  "gradeLevel": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 50
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "difficulty": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["EASY", "MEDIUM", "HARD"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "explanation": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageStatus": {
+                    "type": "string",
+                    "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                  },
+                  "imageHash": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tags": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    }
+                  }
+                },
+                "required": [
+                  "schoolId",
+                  "title",
+                  "statement",
+                  "level",
+                  "topicId",
+                  "sourceName",
+                  "options"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "topicId": {
+                      "type": "string"
+                    },
+                    "sourceName": {
+                      "type": "string"
+                    },
+                    "sourceYear": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceReference": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "optionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["optionId", "label", "content"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "version",
+                    "title",
+                    "statement",
+                    "level",
+                    "status",
+                    "topicId",
+                    "sourceName",
+                    "sourceYear",
+                    "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
+                    "options",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST / QST-001",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QST-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QST-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/{questionId}/review": {
+      "post": {
+        "summary": "Move an imported question to editorial review",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "In review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "topicId": {
+                      "type": "string"
+                    },
+                    "sourceName": {
+                      "type": "string"
+                    },
+                    "sourceYear": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceReference": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "optionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["optionId", "label", "content"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "version",
+                    "title",
+                    "statement",
+                    "level",
+                    "status",
+                    "topicId",
+                    "sourceName",
+                    "sourceYear",
+                    "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
+                    "options",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QST-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QST-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/{questionId}/approve": {
+      "post": {
+        "summary": "Approve an in-review question",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "topicId": {
+                      "type": "string"
+                    },
+                    "sourceName": {
+                      "type": "string"
+                    },
+                    "sourceYear": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceReference": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "optionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["optionId", "label", "content"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "version",
+                    "title",
+                    "statement",
+                    "level",
+                    "status",
+                    "topicId",
+                    "sourceName",
+                    "sourceYear",
+                    "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
+                    "options",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QST-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QST-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/{questionId}/reject": {
+      "post": {
+        "summary": "Reject an in-review question",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": ["schoolId", "reason"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "topicId": {
+                      "type": "string"
+                    },
+                    "sourceName": {
+                      "type": "string"
+                    },
+                    "sourceYear": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceReference": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "optionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["optionId", "label", "content"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "version",
+                    "title",
+                    "statement",
+                    "level",
+                    "status",
+                    "topicId",
+                    "sourceName",
+                    "sourceYear",
+                    "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
+                    "options",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QST-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QST-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/{questionId}/return-to-review": {
+      "post": {
+        "summary": "Return an approved or rejected question to review",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "In review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "topicId": {
+                      "type": "string"
+                    },
+                    "sourceName": {
+                      "type": "string"
+                    },
+                    "sourceYear": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceReference": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "optionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "isCorrect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["optionId", "label", "content"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "required": [
+                    "questionId",
+                    "version",
+                    "title",
+                    "statement",
+                    "level",
+                    "status",
+                    "topicId",
+                    "sourceName",
+                    "sourceYear",
+                    "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
+                    "options",
+                    "createdAt",
+                    "updatedAt",
+                    "publishedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QST-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QST-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/questions/{questionId}/publish": {
       "post": {
-        "summary": "Publish the current DRAFT (requires question:publish in schoolId)",
+        "summary": "Publish only an APPROVED question (requires question:publish in schoolId)",
         "security": [
           {
             "sessionToken": []
@@ -2935,12 +5816,26 @@
                       "type": "string"
                     },
                     "level": {
-                      "type": "string",
-                      "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
                     },
                     "topicId": {
                       "type": "string"
@@ -2962,6 +5857,59 @@
                     },
                     "sourceReference": {
                       "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "options": {
                       "type": "array",
@@ -3006,6 +5954,19 @@
                     "sourceName",
                     "sourceYear",
                     "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
                     "options",
                     "createdAt",
                     "updatedAt",
@@ -3181,12 +6142,26 @@
                       "type": "string"
                     },
                     "level": {
-                      "type": "string",
-                      "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
                     },
                     "topicId": {
                       "type": "string"
@@ -3208,6 +6183,59 @@
                     },
                     "sourceReference": {
                       "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "options": {
                       "type": "array",
@@ -3252,6 +6280,19 @@
                     "sourceName",
                     "sourceYear",
                     "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
                     "options",
                     "createdAt",
                     "updatedAt",
@@ -3367,7 +6408,7 @@
     },
     "/questions/{questionId}/version": {
       "post": {
-        "summary": "Create version N+1 as a DRAFT; published versions are never mutated",
+        "summary": "Create version N+1 as IMPORTED for editorial review; published versions are immutable",
         "security": [
           {
             "sessionToken": []
@@ -3443,6 +6484,17 @@
                       }
                     ]
                   },
+                  "sourceNotes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "options": {
                     "minItems": 2,
                     "maxItems": 5,
@@ -3465,6 +6517,102 @@
                       },
                       "required": ["label", "content", "isCorrect"],
                       "additionalProperties": false
+                    }
+                  },
+                  "sourceType": {
+                    "type": "string",
+                    "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                  },
+                  "legacyId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "authorName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "authorType": {
+                    "type": "string",
+                    "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                  },
+                  "authorVerified": {
+                    "type": "boolean"
+                  },
+                  "gradeLevel": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 50
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "difficulty": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["EASY", "MEDIUM", "HARD"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "explanation": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageStatus": {
+                    "type": "string",
+                    "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                  },
+                  "imageHash": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tags": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
                     }
                   }
                 },
@@ -3506,12 +6654,26 @@
                       "type": "string"
                     },
                     "level": {
-                      "type": "string",
-                      "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["OBMEP_MIRIM", "OBMEP_N1", "OBMEP_N2", "OBMEP_N3"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+                      "enum": [
+                        "IMPORTED",
+                        "IN_REVIEW",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "REJECTED",
+                        "ARCHIVED"
+                      ]
                     },
                     "topicId": {
                       "type": "string"
@@ -3533,6 +6695,59 @@
                     },
                     "sourceReference": {
                       "type": ["string", "null"]
+                    },
+                    "sourceNotes": {
+                      "type": ["string", "null"]
+                    },
+                    "sourceType": {
+                      "type": "string",
+                      "enum": ["OLYMPIAD", "EXAM", "BOOK", "INTERNAL", "UNKNOWN"]
+                    },
+                    "legacyId": {
+                      "type": ["string", "null"]
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "authorType": {
+                      "type": "string",
+                      "enum": ["AUTHOR", "ORGANIZATION", "UNKNOWN"]
+                    },
+                    "authorVerified": {
+                      "type": "boolean"
+                    },
+                    "gradeLevel": {
+                      "type": ["string", "null"]
+                    },
+                    "difficulty": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": ["EASY", "MEDIUM", "HARD"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "explanation": {
+                      "type": ["string", "null"]
+                    },
+                    "imageUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "imageStatus": {
+                      "type": "string",
+                      "enum": ["PENDING", "VALID", "BROKEN", "MISSING"]
+                    },
+                    "imageHash": {
+                      "type": ["string", "null"]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "options": {
                       "type": "array",
@@ -3577,6 +6792,19 @@
                     "sourceName",
                     "sourceYear",
                     "sourceReference",
+                    "sourceNotes",
+                    "sourceType",
+                    "legacyId",
+                    "authorName",
+                    "authorType",
+                    "authorVerified",
+                    "gradeLevel",
+                    "difficulty",
+                    "explanation",
+                    "imageUrl",
+                    "imageStatus",
+                    "imageHash",
+                    "tags",
                     "options",
                     "createdAt",
                     "updatedAt",
@@ -5278,6 +8506,1395 @@
           },
           "409": {
             "description": "EXM-005",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/exams/{examId}/attempts": {
+      "post": {
+        "summary": "Start or idempotently resume an attempt for the authenticated learner",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attempt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "attemptId": {
+                      "type": "string"
+                    },
+                    "schoolId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "examId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["IN_PROGRESS", "SUBMITTED", "EXPIRED"]
+                    },
+                    "startedAt": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    },
+                    "submittedAt": {
+                      "type": ["string", "null"]
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "topicId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "statement": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["label", "content"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "position",
+                          "topicId",
+                          "title",
+                          "statement",
+                          "options"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "selectedOption": {
+                            "type": "string"
+                          },
+                          "answeredAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "selectedOption",
+                          "answeredAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "result": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "score": {
+                              "type": "number"
+                            },
+                            "correctAnswers": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "totalQuestions": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "percentage": {
+                              "type": "number"
+                            },
+                            "topicResults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "correctAnswers": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "totalQuestions": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "percentage": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["correctAnswers", "totalQuestions", "percentage"],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "score",
+                            "correctAnswers",
+                            "totalQuestions",
+                            "percentage",
+                            "topicResults"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "attemptId",
+                    "schoolId",
+                    "userId",
+                    "examId",
+                    "title",
+                    "status",
+                    "startedAt",
+                    "expiresAt",
+                    "submittedAt",
+                    "questions",
+                    "answers",
+                    "result"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST / ATT-001",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ATT-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ATT-003 / ATT-004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/{attemptId}/answers": {
+      "post": {
+        "summary": "Submit or replace an answer in an active attempt",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "questionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "selectedOption": {
+                    "type": "string",
+                    "enum": ["A", "B", "C", "D", "E"]
+                  }
+                },
+                "required": ["schoolId", "questionId", "selectedOption"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attempt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "attemptId": {
+                      "type": "string"
+                    },
+                    "schoolId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "examId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["IN_PROGRESS", "SUBMITTED", "EXPIRED"]
+                    },
+                    "startedAt": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    },
+                    "submittedAt": {
+                      "type": ["string", "null"]
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "topicId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "statement": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["label", "content"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "position",
+                          "topicId",
+                          "title",
+                          "statement",
+                          "options"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "selectedOption": {
+                            "type": "string"
+                          },
+                          "answeredAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "selectedOption",
+                          "answeredAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "result": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "score": {
+                              "type": "number"
+                            },
+                            "correctAnswers": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "totalQuestions": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "percentage": {
+                              "type": "number"
+                            },
+                            "topicResults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "correctAnswers": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "totalQuestions": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "percentage": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["correctAnswers", "totalQuestions", "percentage"],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "score",
+                            "correctAnswers",
+                            "totalQuestions",
+                            "percentage",
+                            "topicResults"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "attemptId",
+                    "schoolId",
+                    "userId",
+                    "examId",
+                    "title",
+                    "status",
+                    "startedAt",
+                    "expiresAt",
+                    "submittedAt",
+                    "questions",
+                    "answers",
+                    "result"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST / ATT-001",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ATT-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ATT-003 / ATT-004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/{attemptId}/finish": {
+      "post": {
+        "summary": "Finish and automatically correct an attempt",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Final result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "attemptId": {
+                      "type": "string"
+                    },
+                    "schoolId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "examId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["IN_PROGRESS", "SUBMITTED", "EXPIRED"]
+                    },
+                    "startedAt": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    },
+                    "submittedAt": {
+                      "type": ["string", "null"]
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "topicId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "statement": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["label", "content"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "position",
+                          "topicId",
+                          "title",
+                          "statement",
+                          "options"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "selectedOption": {
+                            "type": "string"
+                          },
+                          "answeredAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "selectedOption",
+                          "answeredAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "result": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "score": {
+                              "type": "number"
+                            },
+                            "correctAnswers": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "totalQuestions": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "percentage": {
+                              "type": "number"
+                            },
+                            "topicResults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "correctAnswers": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "totalQuestions": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "percentage": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["correctAnswers", "totalQuestions", "percentage"],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "score",
+                            "correctAnswers",
+                            "totalQuestions",
+                            "percentage",
+                            "topicResults"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "attemptId",
+                    "schoolId",
+                    "userId",
+                    "examId",
+                    "title",
+                    "status",
+                    "startedAt",
+                    "expiresAt",
+                    "submittedAt",
+                    "questions",
+                    "answers",
+                    "result"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ATT-002",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/{attemptId}/expire": {
+      "post": {
+        "summary": "Expire an active attempt and persist its partial result",
+        "security": [
+          {
+            "sessionToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "schoolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["schoolId"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expired result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "attemptId": {
+                      "type": "string"
+                    },
+                    "schoolId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "examId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["IN_PROGRESS", "SUBMITTED", "EXPIRED"]
+                    },
+                    "startedAt": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    },
+                    "submittedAt": {
+                      "type": ["string", "null"]
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "topicId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "statement": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["label", "content"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "position",
+                          "topicId",
+                          "title",
+                          "statement",
+                          "options"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "questionId": {
+                            "type": "string"
+                          },
+                          "questionVersion": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "selectedOption": {
+                            "type": "string"
+                          },
+                          "answeredAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "selectedOption",
+                          "answeredAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "result": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "score": {
+                              "type": "number"
+                            },
+                            "correctAnswers": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "totalQuestions": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "percentage": {
+                              "type": "number"
+                            },
+                            "topicResults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "correctAnswers": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "totalQuestions": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "percentage": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["correctAnswers", "totalQuestions", "percentage"],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "score",
+                            "correctAnswers",
+                            "totalQuestions",
+                            "percentage",
+                            "topicResults"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "attemptId",
+                    "schoolId",
+                    "userId",
+                    "examId",
+                    "title",
+                    "status",
+                    "startedAt",
+                    "expiresAt",
+                    "submittedAt",
+                    "questions",
+                    "answers",
+                    "result"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH-003",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SC-002..004",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["error"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ATT-002",
             "content": {
               "application/json": {
                 "schema": {

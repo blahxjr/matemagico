@@ -14,15 +14,23 @@ const examInclude = {
 type ExamRow = Prisma.MockExamGetPayload<{ include: typeof examInclude }>;
 
 function toView(row: ExamRow): MockExamView {
-  const questions: ExamQuestionView[] = row.questions.map((item) => ({
-    questionId: item.questionId,
-    questionVersion: item.questionVersion,
-    position: item.position,
-    title: item.question.title,
-    statement: item.question.statement,
-    level: item.question.level,
-    options: item.question.options.map(({ label, content }) => ({ label, content })),
-  }));
+  const questions: ExamQuestionView[] = row.questions.map((item) => {
+    if (item.question.level === null) throw new MockExamsError('EXM-001');
+    return {
+      questionId: item.questionId,
+      questionVersion: item.questionVersion,
+      position: item.position,
+      topicId: item.question.topicId,
+      title: item.question.title,
+      statement: item.question.statement,
+      level: item.question.level,
+      options: item.question.options.map(({ label, content, isCorrect }) => ({
+        label,
+        content,
+        isCorrect,
+      })),
+    };
+  });
   return {
     examId: row.examId,
     title: row.title,

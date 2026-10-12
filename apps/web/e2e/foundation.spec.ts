@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('foundation home page loads', async ({ page }) => {
+test('MVP login entry point loads', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'MateMágico Champions' })).toBeVisible();
-  await expect(page.getByText('TypeScript strict')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible();
+  await expect(page.getByLabel('E-mail')).toBeVisible();
 });

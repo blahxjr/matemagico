@@ -5,11 +5,13 @@ import type { TopicLookup } from '../domain/ports';
 import { parseCsvRows, parseCsvTable, parseJsonRows } from './import-parsers';
 import { ImportQuestionsService } from './import-questions.service';
 import {
+  ApproveQuestionService,
   ArchiveQuestionService,
   CreateQuestionService,
   GetQuestionService,
   ListQuestionsService,
   PublishQuestionService,
+  StartReviewService,
   VersionQuestionService,
 } from './question.services';
 
@@ -32,12 +34,19 @@ function setup(activeTopics = ['t1', 't2']) {
     create,
     publish,
     version: new VersionQuestionService({ questions, topics, clock }),
+    review: new StartReviewService({ questions, clock }),
+    approve: new ApproveQuestionService({ questions, topics, clock }),
     archive: new ArchiveQuestionService({ questions, clock }),
     get: new GetQuestionService({ questions }),
     list: new ListQuestionsService({ questions }),
-    importer: new ImportQuestionsService({ questions, topics, create, publish }),
+    importer: new ImportQuestionsService({ questions, topics, create }),
   };
 }
+
+const approveForPublication = async (services: ReturnType<typeof setup>, questionId: string) => {
+  await services.review.execute({ questionId });
+  await services.approve.execute({ questionId });
+};
 
 const content = (overrides: Record<string, unknown> = {}) => ({
   title: 'Soma',
@@ -45,8 +54,10 @@ const content = (overrides: Record<string, unknown> = {}) => ({
   level: 'OBMEP_N1',
   topicId: 't1',
   sourceName: 'MOCK',
+  sourceType: 'INTERNAL',
   sourceYear: 2024,
   sourceReference: 'Q1',
+  explanation: 'Explique a operação.',
   options: [
     { label: 'A', content: '1', isCorrect: false },
     { label: 'B', content: '2', isCorrect: true },
@@ -64,10 +75,10 @@ const author = { author: true };
 const reader = { author: false };
 
 describe('questions services', () => {
-  it('creates a DRAFT v1 with the answer key', async () => {
+  it('creates an IMPORTED v1 with the answer key', async () => {
     const s = setup();
     const q = await s.create.execute(content());
-    expect(q).toMatchObject({ version: 1, status: 'DRAFT', publishedAt: null });
+    expect(q).toMatchObject({ version: 1, status: 'IMPORTED', publishedAt: null });
     expect(q.options.find((o) => o.isCorrect)?.label).toBe('B');
   });
 
@@ -102,33 +113,75 @@ describe('questions services', () => {
     expect(await code(setup().create.execute(content({ topicId: 'zzz' })))).toBe('QST-003');
   });
 
-  it('publishes, keeps published content immutable and versions into a new DRAFT', async () => {
+  it('publishes only approved content and keeps published content immutable', async () => {
     const s = setup();
-    const q = await s.create.execute(content());
+    const q = await s.create.execute(
+      content({ explanation: 'Explicação', sourceType: 'INTERNAL' }),
+    );
+    await approveForPublication(s, q.questionId);
     const published = await s.publish.execute({ questionId: q.questionId });
     expect(published.status).toBe('PUBLISHED');
     expect(published.publishedAt).toEqual(now);
     expect(await code(s.publish.execute({ questionId: q.questionId }))).toBe('QST-005');
 
-    const v2 = await s.version.execute({ questionId: q.questionId, ...content({ title: 'Novo' }) });
-    expect(v2).toMatchObject({ version: 2, status: 'DRAFT', title: 'Novo' });
-    // v1 is still the live published one, unchanged.
     const live = await s.get.execute({ questionId: q.questionId, scope: reader });
     expect(live).toMatchObject({ version: 1, title: 'Soma' });
+    expect(
+      await code(
+        s.version.execute({
+          questionId: q.questionId,
+          ...content({ title: 'Novo', explanation: 'Explicação', sourceType: 'INTERNAL' }),
+        }),
+      ),
+    ).toBe('ok');
+  });
 
-    await s.publish.execute({ questionId: q.questionId });
-    const v1 = await s.get.execute({ questionId: q.questionId, version: 1, scope: author });
-    expect(v1.status).toBe('ARCHIVED');
-    expect((await s.get.execute({ questionId: q.questionId, scope: reader })).version).toBe(2);
+  it('creates a new IMPORTED version without changing the published version', async () => {
+    const s = setup();
+    const original = await s.create.execute(content({ explanation: 'Conteúdo validado.' }));
+    await approveForPublication(s, original.questionId);
+    await s.publish.execute({ questionId: original.questionId });
+
+    const next = await s.version.execute({
+      questionId: original.questionId,
+      ...content({ title: 'Nova revisão', explanation: 'Revisão editorial.' }),
+    });
+    expect(next).toMatchObject({ version: 2, status: 'IMPORTED', title: 'Nova revisão' });
+    expect(
+      await s.get.execute({ questionId: original.questionId, version: 1, scope: author }),
+    ).toMatchObject({ version: 1, status: 'PUBLISHED', title: 'Soma' });
+    expect(await code(s.version.execute({ questionId: original.questionId, ...content() }))).toBe(
+      'QST-005',
+    );
+  });
+
+  it('does not approve or publish a question with an unresolved image', async () => {
+    const s = setup();
+    const question = await s.create.execute(
+      content({
+        explanation: 'Confira a figura.',
+        imageUrl: 'https://example.test/question.png',
+        imageStatus: 'PENDING',
+      }),
+    );
+    await s.review.execute({ questionId: question.questionId });
+    expect(await code(s.approve.execute({ questionId: question.questionId }))).toBe('QST-005');
+
+    const reviewQuestion = await s.questions.findCurrent(question.questionId);
+    const approved = reviewQuestion!.approve(now);
+    expect(() => approved.publish(now)).toThrowError(expect.objectContaining({ code: 'QST-005' }));
   });
 
   it('hides the answer key and non-published content from readers', async () => {
     const s = setup();
-    const q = await s.create.execute(content());
+    const q = await s.create.execute(
+      content({ explanation: 'Explicação', sourceType: 'INTERNAL' }),
+    );
     expect(await code(s.get.execute({ questionId: q.questionId, scope: reader }))).toBe('QST-002');
     expect(await code(s.get.execute({ questionId: q.questionId, version: 1, scope: reader }))).toBe(
       'QST-002',
     );
+    await approveForPublication(s, q.questionId);
     await s.publish.execute({ questionId: q.questionId });
     const view = await s.get.execute({ questionId: q.questionId, scope: reader });
     expect(view.options.every((o) => o.isCorrect === undefined)).toBe(true);
@@ -139,7 +192,7 @@ describe('questions services', () => {
     );
   });
 
-  it('archives the published version, or the draft; archived cannot be archived again', async () => {
+  it('archives the published version or an imported question; archived cannot be archived again', async () => {
     const s = setup();
     const draft = await s.create.execute(content());
     expect((await s.archive.execute({ questionId: draft.questionId })).status).toBe('ARCHIVED');
@@ -147,9 +200,11 @@ describe('questions services', () => {
     expect(await code(s.publish.execute({ questionId: draft.questionId }))).toBe('QST-005');
     expect(await code(s.archive.execute({ questionId: 'nope' }))).toBe('QST-002');
 
-    const q = await s.create.execute(content({ sourceReference: 'Q2' }));
+    const q = await s.create.execute(
+      content({ sourceReference: 'Q2', explanation: 'Explicação', sourceType: 'INTERNAL' }),
+    );
+    await approveForPublication(s, q.questionId);
     await s.publish.execute({ questionId: q.questionId });
-    await s.version.execute({ questionId: q.questionId, ...content({ title: 'v2' }) });
     await s.archive.execute({ questionId: q.questionId });
     const live = await code(s.get.execute({ questionId: q.questionId, scope: reader }));
     expect(live).toBe('QST-002');
@@ -167,17 +222,30 @@ describe('questions services', () => {
 
   it('does not publish when the topic became inactive', async () => {
     const s = setup();
-    const q = await s.create.execute(content());
+    const q = await s.create.execute(
+      content({ explanation: 'Explicação', sourceType: 'INTERNAL' }),
+    );
+    await approveForPublication(s, q.questionId);
     (s.topics as { isActiveTopic: TopicLookup['isActiveTopic'] }).isActiveTopic = async () => false;
     expect(await code(s.publish.execute({ questionId: q.questionId }))).toBe('QST-003');
   });
 
   it('lists with filters, pagination and reader scoping', async () => {
     const s = setup();
-    const a = await s.create.execute(content({ sourceReference: 'A' }));
-    await s.create.execute(
-      content({ level: 'OBMEP_N2', topicId: 't2', sourceYear: 2023, sourceReference: 'B' }),
+    const a = await s.create.execute(
+      content({ sourceReference: 'A', explanation: 'Explicação', sourceType: 'INTERNAL' }),
     );
+    await s.create.execute(
+      content({
+        level: 'OBMEP_N2',
+        topicId: 't2',
+        sourceYear: 2023,
+        sourceReference: 'B',
+        explanation: 'Explicação',
+        sourceType: 'INTERNAL',
+      }),
+    );
+    await approveForPublication(s, a.questionId);
     await s.publish.execute({ questionId: a.questionId });
 
     const asReader = await s.list.execute({ scope: reader });
@@ -228,7 +296,7 @@ describe('import pipeline', () => {
 
   it('imports JSON, reports failures by index and is idempotent', async () => {
     const s = setup();
-    const first = await s.importer.execute({ format: 'json', payload: json, publish: true });
+    const first = await s.importer.execute({ format: 'json', payload: json });
     expect(first).toEqual({
       created: 1,
       skipped: 0,
@@ -237,7 +305,7 @@ describe('import pipeline', () => {
         { index: 2, code: 'QST-001' },
       ],
     });
-    expect((await s.list.execute({ scope: reader })).total).toBe(1);
+    expect((await s.list.execute({ scope: reader })).total).toBe(0);
     const second = await s.importer.execute({ format: 'json', payload: json });
     expect(second.created).toBe(0);
     expect(second.skipped).toBe(1);
@@ -258,7 +326,7 @@ describe('import pipeline', () => {
 
   it('imports CSV with quoting and a correct-letter column', async () => {
     const s = setup();
-    const report = await s.importer.execute({ format: 'csv', payload: csv, publish: true });
+    const report = await s.importer.execute({ format: 'csv', payload: csv });
     expect(report).toEqual({ created: 1, skipped: 0, failed: [{ index: 1, code: 'QST-003' }] });
     const [item] = (await s.list.execute({ scope: author })).items;
     expect(item?.statement).toBe('Quanto é 1+1, "certo"?');

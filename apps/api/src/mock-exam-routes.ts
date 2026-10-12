@@ -15,6 +15,22 @@ const COLLECTION_PATH = '/exams';
 const ITEM_PATH = /^\/exams\/([^/]+)$/;
 const ACTION_PATH = /^\/exams\/([^/]+)\/(publish|archive|start)$/;
 
+const publicExam = <
+  T extends {
+    questions: readonly {
+      options: readonly { label: string; content: string; isCorrect: boolean }[];
+    }[];
+  },
+>(
+  exam: T,
+) => ({
+  ...exam,
+  questions: exam.questions.map((question) => ({
+    ...question,
+    options: question.options.map(({ label, content }) => ({ label, content })),
+  })),
+});
+
 export function handleMockExamRoute(
   root: CompositionRoot,
   req: IncomingMessage,
@@ -59,7 +75,7 @@ async function list(root: CompositionRoot, req: IncomingMessage, res: ServerResp
     schoolId: query.schoolId,
     ...(includeDrafts ? {} : { status: 'PUBLISHED', availableAt: new Date() }),
   });
-  sendJson(res, 200, { items });
+  sendJson(res, 200, { items: items.map(publicExam) });
 }
 
 async function get(
@@ -82,7 +98,7 @@ async function get(
       await authorize(root, req, { schoolId: query.schoolId, action: 'exam:create' });
     }
   }
-  sendJson(res, 200, exam);
+  sendJson(res, 200, publicExam(exam));
 }
 
 async function create(root: CompositionRoot, req: IncomingMessage, res: ServerResponse) {
@@ -101,7 +117,7 @@ async function create(root: CompositionRoot, req: IncomingMessage, res: ServerRe
     availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
     availableUntil: body.availableUntil ? new Date(body.availableUntil) : null,
   });
-  sendJson(res, 201, exam);
+  sendJson(res, 201, publicExam(exam));
 }
 
 async function act(
@@ -124,5 +140,5 @@ async function act(
     action === 'publish'
       ? await root.services.publishMockExam.execute({ examId, schoolId: body.schoolId })
       : await root.services.archiveMockExam.execute({ examId, schoolId: body.schoolId });
-  sendJson(res, 200, result);
+  sendJson(res, 200, publicExam(result));
 }

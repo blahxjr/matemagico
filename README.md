@@ -57,6 +57,17 @@ ValidateSchoolContext
 
 O fluxo completo é validado de ponta a ponta em `packages/testing/src/e2e/mvp-flow.e2e.test.ts`.
 
+## Editorial Pipeline (Prompt 04.1)
+
+This section supersedes the earlier Prompt 04 notes above where lifecycle labels predate the
+editorial workflow. Question ingestion is editorial, not publication. XLSX uploads create `IMPORTED` questions; only
+questions corrected in `IN_REVIEW`, validated and marked `APPROVED` can be published. Published
+versions are immutable, and new versions re-enter the editorial flow. See
+[the editorial pipeline](docs/questions/EDITORIAL-PIPELINE.md) and
+[the import formats](docs/questions/IMPORT-FORMAT.md). Real OBMEP content remains unauthorized
+until written permission is recorded in ADR-0011. The current question bank is global, so school IDs
+authorize editorial actions but do not provide content isolation.
+
 ## Estrutura
 
 ```text

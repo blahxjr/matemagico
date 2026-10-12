@@ -31,6 +31,7 @@ export type {
   QuestionFilter,
   QuestionIdGenerator,
   QuestionRepository,
+  ImportExecutionRepository,
   TopicLookup,
 } from './domain/ports';
 export {
@@ -48,7 +49,9 @@ export {
   UpdateQuestionService,
   EditorialDashboardService,
   VersionQuestionService,
+  ValidateQuestion,
 } from './application/question.services';
+export type { QuestionValidationResult } from './application/question.services';
 export type {
   QuestionOptionView,
   QuestionView,
@@ -58,5 +61,17 @@ export { parseCsvRows, parseCsvTable, parseJsonRows } from './application/import
 export type { ImportRow } from './application/import-parsers';
 export { ImportQuestionsService } from './application/import-questions.service';
 export type { ImportFormat, ImportReport } from './application/import-questions.service';
-export { PrismaQuestionRepository } from './infrastructure/prisma-question.repository';
-export { InMemoryQuestionRepository } from './infrastructure/in-memory-question.repository';
+export {
+  ImportQuestionsFromXlsx,
+  XLSX_WORKSHEET_NAME,
+  fingerprintForRawQuestion,
+} from './application/import-xlsx.service';
+export type { ImportRowResult, XlsxImportReport } from './application/import-xlsx.service';
+export {
+  PrismaImportExecutionRepository,
+  PrismaQuestionRepository,
+} from './infrastructure/prisma-question.repository';
+export {
+  InMemoryImportExecutionRepository,
+  InMemoryQuestionRepository,
+} from './infrastructure/in-memory-question.repository';

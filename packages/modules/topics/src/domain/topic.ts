@@ -9,6 +9,7 @@ export interface TopicSnapshot {
   readonly slug: string;
   readonly description: string;
   readonly status: TopicStatus;
+  readonly parentTopicId: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -48,6 +49,7 @@ export class Topic {
     readonly slug: string,
     readonly description: string,
     readonly status: TopicStatus,
+    readonly parentTopicId: string | null,
     readonly createdAt: Date,
     readonly updatedAt: Date,
   ) {}
@@ -57,6 +59,7 @@ export class Topic {
     name: unknown;
     slug: unknown;
     description?: unknown;
+    parentTopicId?: unknown;
     now: Date;
   }): Topic {
     if (typeof input.topicId !== 'string' || !input.topicId.trim()) {
@@ -68,6 +71,7 @@ export class Topic {
       normalizeTopicSlug(input.slug),
       parseDescription(input.description),
       'ACTIVE',
+      parseParentTopicId(input.parentTopicId),
       new Date(input.now),
       new Date(input.now),
     );
@@ -80,6 +84,7 @@ export class Topic {
       snapshot.slug,
       snapshot.description,
       snapshot.status,
+      snapshot.parentTopicId,
       snapshot.createdAt,
       snapshot.updatedAt,
     );
@@ -100,6 +105,7 @@ export class Topic {
       this.slug,
       changes.description === undefined ? this.description : parseDescription(changes.description),
       this.status,
+      this.parentTopicId,
       this.createdAt,
       new Date(now),
     );
@@ -112,8 +118,15 @@ export class Topic {
       this.slug,
       this.description,
       'INACTIVE',
+      this.parentTopicId,
       this.createdAt,
       new Date(now),
     );
   }
+}
+
+function parseParentTopicId(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'string' || !raw.trim()) throw new TopicsError('TOP-001');
+  return raw.trim();
 }

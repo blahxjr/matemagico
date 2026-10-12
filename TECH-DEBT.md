@@ -26,11 +26,15 @@ Registro canônico (movido de `docs/backlog/TECH-DEBT.md`). Atualizado em 2026-1
 | 19 | Segunda aprovação de papéis privilegiados | Não exposta na API (SCHOOL_ADMIN não pode ser concedido via `/grants`). | Média | Aberta |
 | 20 | Conteúdo do banco é MOCK | As 100 questões do seed são geradas (ADR-0011); conteúdo OBMEP real exige autorização por escrito. | Alta (produto) | Aberta |
 | 21 | Autoria presa a escola | Escrita em tópicos/questões exige `question:*` em um `schoolId` informado; o banco é global (sem posse por escola), então qualquer professor de qualquer escola edita qualquer questão. | Média | Aberta (decidir curadoria global x por escola) |
-| 22 | Importação só por CLI | JSON/CSV via `npm run questions:import`; sem endpoint HTTP nem fila. | Baixa | Aberta |
+| 22 | Importação somente por CLI | XLSX editorial disponível via API; JSON/CSV continuam em `npm run questions:import`. | Baixa | Parcial |
 | 23 | Sem busca textual/ordenação | Listagem filtra por nível, tópico, status e ano; ordem fixa por criação. | Baixa | Aberta |
 | 24 | Testes DB destrutivos | Suítes DB de Membership apagam todas as Roles do banco de teste; rode `npm run seed` depois em bancos de desenvolvimento. | Baixa | Aberta |
-| 25 | Consistência entre seleção e publicação | A publicação confirma que cada versão congelada foi publicada (`publishedAt` preenchido), mesmo se uma versão mais nova já arquivou seu status. Não há serialização explícita entre transações concorrentes de publicação. | Baixa | Monitorar |
-| 26 | Sem Attempt/AutoCorrect | `StartExam` apenas autoriza e retorna o conjunto congelado; tentativa, envio e correção pertencem ao Prompt 06. | Informativa | Planejado |
+
+> Prompt 04.1 resolves the former CLI-only import gap with `POST /questions/import/xlsx`, editorial
+> review, approval, publication gates, and dashboard metrics. The global question-ownership issue
+> remains open in item 21.
+> | 25 | Consistência entre seleção e publicação | A publicação confirma que cada versão congelada foi publicada (`publishedAt` preenchido), mesmo se uma versão mais nova já arquivou seu status. Não há serialização explícita entre transações concorrentes de publicação. | Baixa | Monitorar |
+> | 26 | Sem Attempt/AutoCorrect | `StartExam` apenas autoriza e retorna o conjunto congelado; tentativa, envio e correção pertencem ao Prompt 06. | Informativa | Planejado |
 
 ## Outras observações
 

@@ -58,13 +58,16 @@ import {
   EditorialDashboardService,
   GetQuestionService,
   ImportQuestionsService,
+  ImportQuestionsFromXlsx,
   ListQuestionsService,
   PrismaQuestionRepository,
+  PrismaImportExecutionRepository,
   PublishQuestionService,
   RejectQuestionService,
   ReturnToReviewService,
   StartReviewService,
   UpdateQuestionService,
+  ValidateQuestion,
   VersionQuestionService,
 } from '@matemagico/questions';
 import {
@@ -81,6 +84,13 @@ import {
   PublishMockExam,
   StartExam,
 } from '@matemagico/mock-exams';
+import {
+  ExpireAttempt,
+  FinishAttempt,
+  PrismaAttemptRepository,
+  StartAttempt,
+  SubmitAnswer,
+} from '@matemagico/attempts';
 import {
   CreateTopicService,
   DeactivateTopicService,
@@ -143,6 +153,7 @@ export interface CompositionRoot {
     readonly topics: PrismaTopicRepository;
     readonly questions: PrismaQuestionRepository;
     readonly mockExams: PrismaMockExamRepository;
+    readonly attempts: PrismaAttemptRepository;
   };
   readonly directories: {
     readonly users: UsersDirectory;
@@ -188,9 +199,11 @@ export interface CompositionRoot {
     readonly getQuestion: GetQuestionService;
     readonly listQuestions: ListQuestionsService;
     readonly importQuestions: ImportQuestionsService;
+    readonly importQuestionsFromXlsx: ImportQuestionsFromXlsx;
     readonly startReview: StartReviewService;
     readonly updateQuestion: UpdateQuestionService;
     readonly approveQuestion: ApproveQuestionService;
+    readonly validateQuestion: ValidateQuestion;
     readonly rejectQuestion: RejectQuestionService;
     readonly returnToReview: ReturnToReviewService;
     readonly editorialDashboard: EditorialDashboardService;
@@ -202,6 +215,10 @@ export interface CompositionRoot {
     readonly getMockExam: GetMockExam;
     readonly listMockExams: ListMockExams;
     readonly startExam: StartExam;
+    readonly startAttempt: StartAttempt;
+    readonly submitAnswer: SubmitAnswer;
+    readonly finishAttempt: FinishAttempt;
+    readonly expireAttempt: ExpireAttempt;
   };
 }
 
@@ -225,7 +242,9 @@ export function createCompositionRoot(
     schools: new PrismaSchoolRepository(prisma),
     topics: new PrismaTopicRepository(prisma),
     questions: new PrismaQuestionRepository(prisma),
+    importExecutions: new PrismaImportExecutionRepository(prisma),
     mockExams: new PrismaMockExamRepository(prisma),
+    attempts: new PrismaAttemptRepository(prisma),
   };
 
   const directories = {
@@ -405,7 +424,13 @@ export function createCompositionRoot(
       questions: repositories.questions,
       topics: directories.topics,
       create: createQuestion,
-      publish: publishQuestion,
+    }),
+    importQuestionsFromXlsx: new ImportQuestionsFromXlsx({
+      questions: repositories.questions,
+      topics: repositories.topics,
+      executions: repositories.importExecutions,
+      clock,
+      ids: { next: () => randomUUID() },
     }),
     startReview: new StartReviewService({ questions: repositories.questions, clock }),
     updateQuestion: new UpdateQuestionService({
@@ -413,15 +438,35 @@ export function createCompositionRoot(
       topics: directories.topics,
       clock,
     }),
-    approveQuestion: new ApproveQuestionService({ questions: repositories.questions, clock }),
+    approveQuestion: new ApproveQuestionService({
+      questions: repositories.questions,
+      topics: directories.topics,
+      clock,
+    }),
+    validateQuestion: new ValidateQuestion({
+      questions: repositories.questions,
+      topics: directories.topics,
+    }),
     rejectQuestion: new RejectQuestionService({ questions: repositories.questions, clock }),
     returnToReview: new ReturnToReviewService({ questions: repositories.questions, clock }),
-    editorialDashboard: new EditorialDashboardService(repositories.questions),
+    editorialDashboard: new EditorialDashboardService(
+      repositories.questions,
+      repositories.importExecutions,
+    ),
     publishMockExam: new PublishMockExam({ exams: repositories.mockExams, clock }),
     archiveMockExam: new ArchiveMockExam({ exams: repositories.mockExams, clock }),
     getMockExam: new GetMockExam(repositories.mockExams),
     listMockExams: new ListMockExams(repositories.mockExams),
     startExam: new StartExam({ exams: repositories.mockExams, clock }),
+    startAttempt: new StartAttempt({
+      attempts: repositories.attempts,
+      exams: repositories.mockExams,
+      clock,
+      ids: { next: () => randomUUID() },
+    }),
+    submitAnswer: new SubmitAnswer({ attempts: repositories.attempts, clock }),
+    finishAttempt: new FinishAttempt({ attempts: repositories.attempts, clock }),
+    expireAttempt: new ExpireAttempt({ attempts: repositories.attempts, clock }),
   };
 
   const foundSchool = new FoundSchoolService({

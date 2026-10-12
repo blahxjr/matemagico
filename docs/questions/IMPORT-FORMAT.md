@@ -1,18 +1,22 @@
-# Question Import Format (JSON and CSV)
+# Question Import Format (XLSX, JSON and CSV)
+
+The authenticated binary XLSX endpoint and editorial approval rules are documented in
+[EDITORIAL-PIPELINE.md](./EDITORIAL-PIPELINE.md).
 
 Questions are imported by the `ImportQuestionsService` (`@matemagico/questions`). The CLI is:
 
 ```bash
-npm run questions:import -- --format json --file data/questions/mock-questions.json --publish
+npm run questions:import -- --format xlsx --file data/questions/banco-questoes.xlsx
 npm run questions:import -- --format csv  --file data/questions/mock-questions.sample.csv
 ```
 
-Without `--publish`, questions are created as `DRAFT`. The output is a JSON report
+All imports create questions as `IMPORTED`; the CLI never publishes content. XLSX uses worksheet
+`BANCO_QUESTOES_V11`. The output is a JSON report
 `{ "created": n, "skipped": n, "failed": [{ "index": n, "code": "QST-0xx" }] }`; the exit code is 1
 when any row failed. A bad row never aborts the batch.
 
-**Idempotency**: a row whose `(sourceName, sourceYear, sourceReference)` already exists is
-`skipped`. Provide a unique `sourceReference` per question to make re-imports safe.
+**Deduplication**: content is normalized by case and whitespace, then compared by statement,
+ordered alternatives and answer key. Duplicates in the database and the same XLSX are reported.
 
 **Licensing**: see [ADR-0011](../architecture/ADRs/ADR-0011-question-content-licensing-strategy.md). Do not import third-party content without recorded authorization.
 
@@ -30,6 +34,15 @@ when any row failed. A bad row never aborts the batch.
 | options           | yes              | 2 to 5 options, labels `A`-`E` unique, content 1-1000 chars, **exactly one correct** |
 
 Invalid rows are reported as `QST-001`; an unreadable file as `QST-007`.
+
+## XLSX
+
+The worksheet name must be `BANCO_QUESTOES_V11`. Headers accept Portuguese/English aliases for
+`Autor`, `TipoAutor`, `AutorVerificado`, `TipoOrigem`, `Origem`, `AnoOrigem`, `Referência`,
+`LegacyId`, `Série`, `Dificuldade`, `Explicação`, `Imagem`, `HashImagem`, `Categoria`,
+`Subcategoria`, `Tags`, `Enunciado`, `AlternativaA`..`AlternativaE` and `Gabarito`.
+
+Rows with an image URL are imported with `imageStatus = PENDING`, never `VALID`.
 
 ## JSON
 
@@ -68,4 +81,4 @@ title,statement,level,topicSlug,sourceName,sourceYear,sourceReference,optionA,op
 ## Seed
 
 `npm run seed` creates five topics and imports `data/questions/mock-questions.json` (100 MOCK
-questions, published). Regenerate the files with `npm run questions:generate`.
+questions for editorial review). Regenerate the files with `npm run questions:generate`.

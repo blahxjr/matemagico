@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@matemagico/auth": "*",
+    "@matemagico/attempts": "*",
     "@matemagico/logger": "*",
     "@matemagico/membership": "*",
     "@matemagico/mock-exams": "*",

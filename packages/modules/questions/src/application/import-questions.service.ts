@@ -1,7 +1,8 @@
 import type { QuestionRepository, TopicLookup } from '../domain/ports';
 import { QuestionsError } from '../domain/questions-error';
 import { parseCsvRows, parseJsonRows, type ImportRow } from './import-parsers';
-import type { CreateQuestionService, PublishQuestionService } from './question.services';
+import { fingerprintForRawQuestion } from './import-xlsx.service';
+import type { CreateQuestionService } from './question.services';
 
 export type ImportFormat = 'json' | 'csv';
 
@@ -17,20 +18,14 @@ export class ImportQuestionsService {
       questions: QuestionRepository;
       topics: TopicLookup;
       create: CreateQuestionService;
-      publish: PublishQuestionService;
     },
   ) {}
 
   /**
-   * Creates DRAFT questions (published when `publish`). Rows already imported, identified
-   * by (sourceName, sourceYear, sourceReference), are skipped so the import is idempotent.
+   * Creates IMPORTED questions only. A bad row never aborts the batch; it is reported by index.
    * A bad row never aborts the batch; it is reported by index.
    */
-  async execute(input: {
-    format: ImportFormat;
-    payload: string;
-    publish?: boolean;
-  }): Promise<ImportReport> {
+  async execute(input: { format: ImportFormat; payload: string }): Promise<ImportReport> {
     if (typeof input?.payload !== 'string') throw new QuestionsError('QST-001');
     let rows: ImportRow[];
     if (input.format === 'json') rows = parseJsonRows(input.payload);
@@ -47,22 +42,15 @@ export class ImportQuestionsService {
             ? await this.deps.topics.findActiveTopicIdBySlug(row.topicSlug)
             : null;
         if (!topicId) throw new QuestionsError('QST-003');
-        const reference = typeof row.sourceReference === 'string' ? row.sourceReference.trim() : '';
-        const year = Number.isInteger(row.sourceYear) ? (row.sourceYear as number) : null;
         if (
-          reference &&
-          typeof row.sourceName === 'string' &&
-          (await this.deps.questions.existsBySource({
-            sourceName: row.sourceName.trim(),
-            sourceYear: year,
-            sourceReference: reference,
-          }))
+          await this.deps.questions.existsByFingerprint(
+            fingerprintForRawQuestion({ ...row, topicId }),
+          )
         ) {
           skipped += 1;
           continue;
         }
         const view = await this.deps.create.execute({ ...row, topicId });
-        if (input.publish) await this.deps.publish.execute({ questionId: view.questionId });
         created += 1;
       } catch (error) {
         failed.push({

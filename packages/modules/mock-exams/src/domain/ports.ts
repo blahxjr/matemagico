@@ -2,10 +2,16 @@ import type { QuestionLevel } from '@matemagico/questions';
 import type { MockExam, MockExamQuestionReference, MockExamStatus } from './mock-exam';
 
 export interface ExamQuestionView extends MockExamQuestionReference {
+  readonly topicId: string;
   readonly title: string;
   readonly statement: string;
   readonly level: QuestionLevel;
-  readonly options: readonly { readonly label: string; readonly content: string }[];
+  /** Internal server-side view. HTTP services must remove isCorrect before returning it. */
+  readonly options: readonly {
+    readonly label: string;
+    readonly content: string;
+    readonly isCorrect: boolean;
+  }[];
 }
 
 export interface MockExamView {

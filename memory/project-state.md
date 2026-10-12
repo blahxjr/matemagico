@@ -1,7 +1,7 @@
 # Project State - MateMágico Champions
 
-**Last Update**: 2026-10-10
-**Phase**: Prompt 05 (Question Engine + Mock Exams) complete; next is Prompt 06 (Attempts + AutoCorrect + Outbox + Ranking Base)
+**Last Update**: 2026-10-11
+**Phase**: Prompt 04.1 (editorial XLSX question import) complete; Prompt 06 is the next planned milestone, with Attempts work already present and still requiring Outbox/Ranking completion.
 
 ## Stack
 
@@ -30,6 +30,17 @@ Job `quality` runs PostgreSQL 16 service with health check, `db:validate`, `db:g
 The Actor is derived only from the Session (`Authorization: Bearer <sessionId>`) by `GetSessionActor`. No route accepts `actorUserId` (strict Zod bodies, query strings rejected). Authentication middleware -> 401 (AUTH-003); authorization middleware/services -> 403 (SC-00x, MEM-005). Membership uses `canActivateMembership` / `canGrantRole`; `POST /schools` makes the creator SCHOOL_ADMIN. OpenAPI: `docs/api/openapi.json` (`npm run openapi -w @matemagico/api`). Tests (local, with PostgreSQL): API 41 (20 need a database), Membership 155 + DB suites.
 
 ## Topics + Questions (Prompt 04)
+
+### Editorial pipeline (Prompt 04.1)
+
+XLSX uploads use `POST /questions/import/xlsx` and always create `IMPORTED` questions. The supplied
+640-row workbook was processed in memory: 524 created, 116 duplicates, zero errors, zero published;
+it was not loaded into the persistent database because OBMEP licensing is not approved. The editorial
+cycle is `IMPORTED -> IN_REVIEW -> APPROVED -> PUBLISHED`; publication validates provenance,
+explanation, topic, official level, options, and image state. Published content remains immutable;
+version N+1 restarts as `IMPORTED`. Editorial queue and dashboard APIs are available. The database
+remains a global bank, and `schoolId` is authorization context rather than content ownership.
+See `docs/questions/EDITORIAL-PIPELINE.md`. OBMEP content remains unauthorized per ADR-0011.
 
 Questions are rows `(questionId, version)` (`isCurrent` marks the latest). Published versions are immutable; changes create version N+1 as DRAFT and publishing it archives the previous published version (partial unique indexes enforce one current and one published per question). Writes need `question:create|update|publish` in the `schoolId` of the request (TEACHER/SCHOOL_ADMIN only). Readers see only PUBLISHED questions/ACTIVE topics without `isCorrect`. Content is MOCK only (ADR-0011); import format in `docs/questions/IMPORT-FORMAT.md`. Tests: topics 13, questions 20 (+1 DB each), API e2e 51 (30 need a database, 10 are new); coverage topics ~96%, questions ~95%.
 

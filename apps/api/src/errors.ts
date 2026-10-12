@@ -8,10 +8,12 @@ import { TopicsError } from '@matemagico/topics';
 import { MockExamsError } from '@matemagico/mock-exams';
 import { QuestionEngineError } from '@matemagico/question-engine';
 import { UsersError } from '@matemagico/users';
+import { AttemptsError } from '@matemagico/attempts';
 import { InvalidBodyError, sendJson } from './http';
 
 /** Code returned when a dependency failure is not a known domain error (always fail closed). */
-export type FallbackCode = 'AUTH-004' | 'MEM-005' | 'SCH-004' | 'TOP-004' | 'QST-006' | 'EXM-006';
+export type FallbackCode =
+  'AUTH-004' | 'MEM-005' | 'SCH-004' | 'TOP-004' | 'QST-006' | 'EXM-006' | 'ATT-006';
 
 interface Mapped {
   readonly status: number;
@@ -79,6 +81,14 @@ const QUESTION_ENGINE: Record<string, number> = {
   'QEN-002': 400,
   'QEN-003': 400,
 };
+const ATTEMPTS: Record<string, number> = {
+  'ATT-001': 400,
+  'ATT-002': 404,
+  'ATT-003': 409,
+  'ATT-004': 409,
+  'ATT-005': 409,
+  'ATT-006': 503,
+};
 const FALLBACK_STATUS: Record<FallbackCode, number> = {
   'AUTH-004': 503,
   'MEM-005': 503,
@@ -86,6 +96,7 @@ const FALLBACK_STATUS: Record<FallbackCode, number> = {
   'TOP-004': 503,
   'QST-006': 503,
   'EXM-006': 503,
+  'ATT-006': 503,
 };
 
 function map(error: unknown, fallback: FallbackCode): Mapped {
@@ -111,6 +122,7 @@ function map(error: unknown, fallback: FallbackCode): Mapped {
   if (error instanceof QuestionEngineError) {
     return { status: QUESTION_ENGINE[error.code]!, code: error.code };
   }
+  if (error instanceof AttemptsError) return { status: ATTEMPTS[error.code]!, code: error.code };
   return { status: FALLBACK_STATUS[fallback], code: fallback };
 }
 

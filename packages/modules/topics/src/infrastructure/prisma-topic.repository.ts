@@ -14,6 +14,7 @@ export class PrismaTopicRepository implements TopicRepository {
           slug: topic.slug,
           description: topic.description,
           status: topic.status,
+          parentTopicId: topic.parentTopicId,
           createdAt: topic.createdAt,
           updatedAt: topic.updatedAt,
         },
@@ -50,6 +51,7 @@ export class PrismaTopicRepository implements TopicRepository {
         name: topic.name,
         description: topic.description,
         status: topic.status,
+        parentTopicId: topic.parentTopicId,
         updatedAt: topic.updatedAt,
       },
     });

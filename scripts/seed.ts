@@ -145,16 +145,28 @@ async function seedQuestionBank(): Promise<void> {
   const report = await services.importQuestions.execute({
     format: 'json',
     payload: JSON.stringify(data.questions),
-    publish: true,
   });
   if (report.failed.length > 0) {
     throw new Error(`Question import failed: ${JSON.stringify(report.failed)}`);
   }
-  const published = await prisma.question.count({
-    where: { status: 'PUBLISHED', sourceName: 'MOCK' },
-  });
+  const imported = await repositories.questions.list(
+    { status: 'IMPORTED' },
+    { limit: 1000, offset: 0 },
+  );
+  for (const question of imported.items) {
+    await services.updateQuestion.execute({
+      questionId: question.id,
+      ...question.content,
+      sourceType: 'INTERNAL',
+      authorName: 'MateMágico',
+      explanation: question.content.explanation ?? 'Resolução disponível no MateMágico.',
+    });
+    const reviewed = await services.startReview.execute({ questionId: question.id });
+    await services.approveQuestion.execute({ questionId: reviewed.questionId });
+    await services.publishQuestion.execute({ questionId: reviewed.questionId });
+  }
   console.log(
-    `Question bank seeded (MOCK content): created ${report.created}, skipped ${report.skipped}, published ${published}.`,
+    `Question bank seeded: created ${report.created}, skipped ${report.skipped}, published ${imported.items.length}.`,
   );
 }
 

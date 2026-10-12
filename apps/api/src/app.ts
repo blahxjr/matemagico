@@ -8,6 +8,7 @@ import { handleSchoolRoute } from './school-routes';
 import { handleQuestionRoute } from './question-routes';
 import { handleTopicRoute } from './topic-routes';
 import { handleMockExamRoute } from './mock-exam-routes';
+import { handleAttemptRoute } from './attempt-routes';
 import { sendJson } from './http';
 import { buildOpenApiDocument } from './openapi';
 
@@ -37,22 +38,38 @@ function getModule(path: string): string {
   if (path === '/topics' || path.startsWith('/topics/')) return 'topics';
   if (path === '/questions' || path.startsWith('/questions/')) return 'questions';
   if (path === '/exams' || path.startsWith('/exams/')) return 'mock-exams';
+  if (path === '/attempts' || path.startsWith('/attempts/')) return 'attempts';
   return 'platform';
 }
 
 /** Only these read routes accept a (strictly validated) query string. */
-const QUERY_ROUTES = [/^\/topics(\/[^/]+)?$/, /^\/questions(\/[^/]+)?$/, /^\/exams(\/[^/]+)?$/];
+const QUERY_ROUTES = [
+  /^\/topics(\/[^/]+)?$/,
+  /^\/questions(\/[^/]+)?$/,
+  /^\/questions\/review$/,
+  /^\/questions\/editorial\/dashboard$/,
+  /^\/exams(\/[^/]+)?$/,
+];
 
 function getRoute(path: string): string {
   if (path === '/topics' || path === '/questions' || path === '/exams') return path;
+  if (path === '/questions/review' || path === '/questions/editorial-dashboard') return path;
+  if (path === '/questions/import/xlsx') return path;
   if (/^\/topics\/[^/]+$/.test(path)) return '/topics/:topicId';
   if (/^\/questions\/[^/]+$/.test(path)) return '/questions/:questionId';
-  if (/^\/questions\/[^/]+\/(publish|archive|version)$/.test(path)) {
+  if (
+    /^\/questions\/[^/]+\/(publish|archive|version|review|approve|reject|return-to-review)$/.test(
+      path,
+    )
+  ) {
     return `/questions/:questionId/${path.split('/')[3]}`;
   }
   if (/^\/exams\/[^/]+\/(publish|archive|start)$/.test(path)) {
     return `/exams/:examId/${path.split('/')[3]}`;
   }
+  if (/^\/exams\/[^/]+\/attempts$/.test(path)) return '/exams/:examId/attempts';
+  if (/^\/attempts\/[^/]+\/(answers|finish|expire)$/.test(path))
+    return `/attempts/:attemptId/${path.split('/')[3]}`;
   if (/^\/exams\/[^/]+$/.test(path)) return '/exams/:examId';
   if (['/auth/login', '/auth/register', '/auth/logout', '/auth/me'].includes(path)) return path;
   if (path === '/schools') return path;
@@ -165,6 +182,7 @@ export function createApp(root: CompositionRoot, options: AppOptions = {}): Serv
         if (handleTopicRoute(root, req, res, path)) return;
         if (handleQuestionRoute(root, req, res, path)) return;
         if (handleMockExamRoute(root, req, res, path)) return;
+        if (handleAttemptRoute(root, req, res, path)) return;
 
         send(res, 404, { status: 'not_found' });
       } catch (error) {

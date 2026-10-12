@@ -29,6 +29,7 @@ export interface QuestionSource {
   readonly sourceYear: number | null;
   readonly sourceReference: string | null;
   readonly legacyId: string | null;
+  readonly sourceNotes: string | null;
 }
 
 export interface EditorialMetadata {
@@ -54,7 +55,7 @@ export interface QuestionOption {
 export interface QuestionContent extends QuestionSource, EditorialMetadata {
   readonly title: string;
   readonly statement: string;
-  readonly level: QuestionLevel;
+  readonly level: QuestionLevel | null;
   readonly topicId: string;
   readonly options: readonly Omit<QuestionOption, 'optionId'>[];
 }
@@ -79,6 +80,7 @@ export interface RawQuestionContent {
   sourceYear?: unknown;
   sourceReference?: unknown;
   legacyId?: unknown;
+  sourceNotes?: unknown;
   authorName?: unknown;
   authorType?: unknown;
   authorVerified?: unknown;
@@ -123,7 +125,13 @@ const enumValue = <T extends readonly string[]>(
 /** Normalizes import and editorial content; nothing malformed is partially accepted. */
 export function parseContent(raw: RawQuestionContent): QuestionContent {
   if (typeof raw !== 'object' || raw === null) throw invalid();
-  if (!(QUESTION_LEVELS as readonly unknown[]).includes(raw.level)) throw invalid();
+  if (
+    raw.level !== null &&
+    raw.level !== undefined &&
+    !(QUESTION_LEVELS as readonly unknown[]).includes(raw.level)
+  ) {
+    throw invalid();
+  }
   let sourceYear: number | null = null;
   if (raw.sourceYear !== undefined && raw.sourceYear !== null) {
     if (
@@ -164,13 +172,14 @@ export function parseContent(raw: RawQuestionContent): QuestionContent {
   return {
     title: text(raw.title, 200),
     statement: text(raw.statement, 5000),
-    level: raw.level as QuestionLevel,
+    level: raw.level === null || raw.level === undefined ? null : (raw.level as QuestionLevel),
     topicId: text(raw.topicId, 128),
     sourceType: enumValue(raw.sourceType, SOURCE_TYPES, 'UNKNOWN'),
     sourceName: text(raw.sourceName, 120),
     sourceYear,
     sourceReference: optionalText(raw.sourceReference, 200),
     legacyId: optionalText(raw.legacyId, 128),
+    sourceNotes: optionalText(raw.sourceNotes, 2000),
     authorName: raw.authorName === undefined ? 'Unknown' : text(raw.authorName, 200),
     authorType: enumValue(raw.authorType, AUTHOR_TYPES, 'UNKNOWN'),
     authorVerified:
@@ -193,6 +202,36 @@ export function parseContent(raw: RawQuestionContent): QuestionContent {
     tags,
     options: options.sort((a, b) => a.label.localeCompare(b.label)),
   };
+}
+
+export function questionPublicationIssues(content: QuestionContent): string[] {
+  const issues: string[] = [];
+  if (!content.title.trim()) issues.push('title');
+  if (!content.statement.trim()) issues.push('statement');
+  if (!content.level) issues.push('level');
+  if (
+    content.options.length < 2 ||
+    content.options.length > 5 ||
+    content.options.some(
+      (option, index) =>
+        !OPTION_LABELS.some((label) => label === option.label) ||
+        content.options.findIndex((candidate) => candidate.label === option.label) !== index ||
+        !option.content.trim(),
+    ) ||
+    content.options.filter((option) => option.isCorrect).length !== 1
+  ) {
+    issues.push('options');
+  }
+  if (!content.explanation?.trim()) issues.push('explanation');
+  if (content.sourceType === 'UNKNOWN' || !content.sourceName.trim()) issues.push('source');
+  if (!content.authorName.trim()) issues.push('author');
+  if (
+    (content.imageStatus !== 'MISSING' && content.imageStatus !== 'VALID') ||
+    (content.imageUrl !== null && content.imageStatus !== 'VALID')
+  ) {
+    issues.push('image');
+  }
+  return issues;
 }
 
 export class Question {
@@ -254,13 +293,11 @@ export class Question {
     return this.status === 'PUBLISHED';
   }
   startReview(now: Date): Question {
-    if (this.status !== 'IMPORTED' && this.status !== 'REJECTED')
-      throw new QuestionsError('QST-005');
+    if (this.status !== 'IMPORTED') throw new QuestionsError('QST-005');
     return this.withStatus('IN_REVIEW', now);
   }
   update(content: QuestionContent, now: Date): Question {
-    if (this.status === 'PUBLISHED' || this.status === 'ARCHIVED')
-      throw new QuestionsError('QST-005');
+    if (this.status !== 'IN_REVIEW') throw new QuestionsError('QST-005');
     return new Question(
       this.id,
       this.version,
@@ -268,6 +305,20 @@ export class Question {
       this.status,
       Question.optionsFor(this.id, this.version, content),
       this.createdAt,
+      new Date(now),
+      null,
+    );
+  }
+  nextVersion(content: QuestionContent, now: Date): Question {
+    if (this.status !== 'PUBLISHED') throw new QuestionsError('QST-005');
+    const version = this.version + 1;
+    return new Question(
+      this.id,
+      version,
+      content,
+      'IMPORTED',
+      Question.optionsFor(this.id, version, content),
+      new Date(now),
       new Date(now),
       null,
     );
@@ -287,13 +338,7 @@ export class Question {
   }
   publish(now: Date): Question {
     if (this.status !== 'APPROVED') throw new QuestionsError('QST-005');
-    if (
-      !this.content.explanation ||
-      this.content.sourceType === 'UNKNOWN' ||
-      !this.content.authorName ||
-      (this.content.imageUrl && this.content.imageStatus !== 'VALID')
-    )
-      throw new QuestionsError('QST-005');
+    if (questionPublicationIssues(this.content).length > 0) throw new QuestionsError('QST-005');
     return new Question(
       this.id,
       this.version,

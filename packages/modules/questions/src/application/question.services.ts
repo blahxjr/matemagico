@@ -3,6 +3,7 @@ import {
   Question,
   QUESTION_LEVELS,
   QUESTION_STATUSES,
+  questionPublicationIssues,
   type QuestionLevel,
   type QuestionOption,
   type QuestionStatus,
@@ -30,12 +31,13 @@ export interface QuestionView {
   readonly version: number;
   readonly title: string;
   readonly statement: string;
-  readonly level: QuestionLevel;
+  readonly level: QuestionLevel | null;
   readonly status: QuestionStatus;
   readonly topicId: string;
   readonly sourceName: string;
   readonly sourceYear: number | null;
   readonly sourceReference: string | null;
+  readonly sourceNotes: string | null;
   readonly sourceType: Question['content']['sourceType'];
   readonly legacyId: string | null;
   readonly authorName: string;
@@ -70,6 +72,7 @@ export const toQuestionView = (question: Question, includeAnswers: boolean): Que
   sourceName: question.content.sourceName,
   sourceYear: question.content.sourceYear,
   sourceReference: question.content.sourceReference,
+  sourceNotes: question.content.sourceNotes,
   sourceType: question.content.sourceType,
   legacyId: question.content.legacyId,
   authorName: question.content.authorName,
@@ -140,10 +143,10 @@ export class VersionQuestionService {
     const current = await guard(() => this.deps.questions.findCurrent(questionId));
     if (!current) throw new QuestionsError('QST-002');
     await requireActiveTopic(this.deps.topics, content.topicId);
-    if (current.status === 'PUBLISHED') throw new QuestionsError('QST-005');
-    const updated = current.update(content, this.deps.clock.now());
-    await guard(() => this.deps.questions.save(updated));
-    return toQuestionView(updated, true);
+    const version = current.nextVersion(content, this.deps.clock.now());
+    const result = await guard(() => this.deps.questions.addVersion(version));
+    if (result === 'CONFLICT') throw new QuestionsError('QST-004');
+    return toQuestionView(version, true);
   }
 }
 
@@ -174,12 +177,38 @@ export class StartReviewService {
 }
 
 export class ApproveQuestionService {
-  constructor(private readonly deps: { questions: QuestionRepository; clock: Clock }) {}
+  constructor(
+    private readonly deps: { questions: QuestionRepository; topics: TopicLookup; clock: Clock },
+  ) {}
   async execute(input: { questionId: string }): Promise<QuestionView> {
     const current = await requireQuestion(this.deps.questions, input.questionId);
+    const validation = await new ValidateQuestion({
+      questions: this.deps.questions,
+      topics: this.deps.topics,
+    }).execute({ questionId: current.id });
+    if (!validation.valid) throw new QuestionsError('QST-005');
     const updated = current.approve(this.deps.clock.now());
     await guard(() => this.deps.questions.saveStatus(updated));
     return toQuestionView(updated, true);
+  }
+}
+
+export interface QuestionValidationResult {
+  readonly valid: boolean;
+  readonly issues: readonly string[];
+}
+
+export class ValidateQuestion {
+  constructor(private readonly deps: { questions: QuestionRepository; topics: TopicLookup }) {}
+
+  async execute(input: { questionId: string }): Promise<QuestionValidationResult> {
+    const question = await requireQuestion(this.deps.questions, input.questionId);
+    const issues = questionPublicationIssues(question.content);
+    if (question.status !== 'IN_REVIEW') issues.unshift('status');
+    if (!(await guard(() => this.deps.topics.isActiveTopic(question.content.topicId)))) {
+      issues.push('topic');
+    }
+    return { valid: issues.length === 0, issues };
   }
 }
 
@@ -220,7 +249,10 @@ export class UpdateQuestionService {
 }
 
 export class EditorialDashboardService {
-  constructor(private readonly questions: QuestionRepository) {}
+  constructor(
+    private readonly questions: QuestionRepository,
+    private readonly imports?: import('../domain/ports').ImportExecutionRepository,
+  ) {}
   async execute() {
     const status = await guard(() => this.questions.countByStatus());
     return {
@@ -229,7 +261,7 @@ export class EditorialDashboardService {
       approved: status.APPROVED,
       published: status.PUBLISHED,
       rejected: status.REJECTED,
-      duplicates: 0,
+      duplicates: this.imports ? await guard(() => this.imports!.totalDuplicates()) : 0,
     };
   }
 }

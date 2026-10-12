@@ -1,5 +1,11 @@
 import { Question } from '../domain/question';
-import type { AddQuestionResult, Page, QuestionFilter, QuestionRepository } from '../domain/ports';
+import type {
+  AddQuestionResult,
+  ImportExecutionRepository,
+  Page,
+  QuestionFilter,
+  QuestionRepository,
+} from '../domain/ports';
 
 export class InMemoryQuestionRepository implements QuestionRepository {
   private readonly versions = new Map<string, Question[]>();
@@ -77,6 +83,9 @@ export class InMemoryQuestionRepository implements QuestionRepository {
       .filter((q) => !filter.level || q.content.level === filter.level)
       .filter((q) => !filter.topicId || q.content.topicId === filter.topicId)
       .filter((q) => filter.sourceYear === undefined || q.content.sourceYear === filter.sourceYear)
+      .filter((q) => filter.gradeLevel === undefined || q.content.gradeLevel === filter.gradeLevel)
+      .filter((q) => filter.difficulty === undefined || q.content.difficulty === filter.difficulty)
+      .filter((q) => filter.sourceType === undefined || q.content.sourceType === filter.sourceType)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
     return { items: matched.slice(page.offset, page.offset + page.limit), total: matched.length };
   }
@@ -124,8 +133,35 @@ export class InMemoryQuestionRepository implements QuestionRepository {
 function fingerprintFor(question: Question): string {
   const options = [...question.options]
     .sort((left, right) => left.label.localeCompare(right.label))
-    .map((option) => option.content.trim().toLowerCase())
+    .map((option) => `${option.label}:${normalizeFingerprintValue(option.content)}`)
     .join('\u001e');
   const answer = question.options.find((option) => option.isCorrect)?.label ?? '';
-  return [question.content.statement.trim().toLowerCase(), options, answer].join('\u001f');
+  return [normalizeFingerprintValue(question.content.statement), options, answer].join('\u001f');
+}
+
+function normalizeFingerprintValue(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+}
+
+export class InMemoryImportExecutionRepository implements ImportExecutionRepository {
+  private readonly executions: {
+    duplicates: number;
+  }[] = [];
+
+  async record(input: {
+    importExecutionId: string;
+    sourceFileName: string | null;
+    worksheetName: string;
+    processed: number;
+    created: number;
+    duplicates: number;
+    errors: number;
+    createdAt: Date;
+  }): Promise<void> {
+    this.executions.push({ duplicates: input.duplicates });
+  }
+
+  async totalDuplicates(): Promise<number> {
+    return this.executions.reduce((total, execution) => total + execution.duplicates, 0);
+  }
 }

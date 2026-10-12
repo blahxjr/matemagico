@@ -59,7 +59,9 @@ describe.skipIf(!databaseUrl)('mock exams API', () => {
         level: 'OBMEP_N1',
         topicId,
         sourceName: 'MOCK',
+        sourceType: 'INTERNAL',
         sourceReference: `exam-${randomUUID()}`,
+        explanation: 'Some os valores indicados.',
         options,
       },
       false,
@@ -68,13 +70,15 @@ describe.skipIf(!databaseUrl)('mock exams API', () => {
     expect(created.status).toBe(201);
     const question = (await created.json()) as { questionId: string };
     questionId = question.questionId;
-    const published = await postJson(
-      `${app.url}/questions/${questionId}/publish`,
-      { schoolId },
-      false,
-      teacher.token,
-    );
-    expect(published.status).toBe(200);
+    for (const action of ['review', 'approve', 'publish']) {
+      const transitioned = await postJson(
+        `${app.url}/questions/${questionId}/${action}`,
+        { schoolId },
+        false,
+        teacher.token,
+      );
+      expect(transitioned.status).toBe(200);
+    }
   };
 
   const createExam = async (overrides: Record<string, unknown> = {}) =>
@@ -174,23 +178,27 @@ describe.skipIf(!databaseUrl)('mock exams API', () => {
         level: 'OBMEP_N1',
         topicId,
         sourceName: 'MOCK',
+        sourceType: 'INTERNAL',
         sourceReference: `version-${randomUUID()}`,
+        explanation: 'A soma continua igual.',
         options,
       },
       false,
       teacher.token,
     );
     expect(version.status).toBe(201);
-    expect(
-      (
-        await postJson(
-          `${app.url}/questions/${questionId}/publish`,
-          { schoolId },
-          false,
-          teacher.token,
-        )
-      ).status,
-    ).toBe(200);
+    for (const action of ['review', 'approve', 'publish']) {
+      expect(
+        (
+          await postJson(
+            `${app.url}/questions/${questionId}/${action}`,
+            { schoolId },
+            false,
+            teacher.token,
+          )
+        ).status,
+      ).toBe(200);
+    }
 
     const startAgain = await postJson(
       `${app.url}/exams/${draft.examId}/start`,

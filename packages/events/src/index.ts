@@ -7,6 +7,7 @@ export {
   type EventEnvelope,
   type MembershipCreatedEvent,
   type RoleGrantedEvent,
+  type AttemptCompletedEvent,
 } from './contracts';
 
 export type EventFoundationMetadata = Pick<

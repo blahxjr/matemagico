@@ -1,13 +1,14 @@
 # Next Steps - MateMágico Champions
 
-**Last Updated**: 2026-10-10
+**Last Updated**: 2026-10-11
 
 ## Immediate
 
-1. Confirm the first green CI run (migrate deploy, seed, `test:db`) and record it in `release-history.md`.
-2. **Prompt 06**: Attempts + AutoCorrect + Outbox + Ranking Base. Start from the frozen `(questionId, questionVersion)` references returned by `StartExam`; do not recalculate the published exam's question set.
+1. Prompt 04.1 editorial import is implemented; preserve the `IMPORTED -> IN_REVIEW -> APPROVED -> PUBLISHED` gate and do not import unauthorized OBMEP content into a persistent database.
+2. **Prompt 06**: complete Attempts + AutoCorrect + Outbox + Ranking Base. Keep using frozen `(questionId, questionVersion)` references from published exams.
 3. Decide question-bank curation (global vs per-school) and obtain OBMEP content authorization (ADR-0011).
-4. Persistent rate-limit adapter, password reset, per-user school quota (see `TECH-DEBT.md` items 14-19).
+4. Confirm CI and migrations on the intended test database; avoid using a developer database for destructive DB suites.
+5. Persistent rate-limit adapter, password reset, per-user school quota (see `TECH-DEBT.md` items 14-19).
 
 ## Then
 

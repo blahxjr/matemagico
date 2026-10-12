@@ -218,10 +218,11 @@ model Question {
   version         Int
   title           String
   statement       String
-  level           QuestionLevel
+  level           QuestionLevel?
   sourceName      String
   sourceYear      Int?
   sourceReference String?
+  sourceNotes     String?
   sourceType      SourceType @default(UNKNOWN)
   legacyId        String?
   authorName      String     @default("Unknown")
@@ -248,6 +249,19 @@ model Question {
   @@index([isCurrent, status])
   @@index([sourceName, sourceYear, sourceReference])
   @@index([legacyId])
+}
+
+model ImportExecution {
+  importExecutionId String   @id
+  sourceFileName   String?
+  worksheetName    String
+  processed        Int
+  created          Int
+  duplicates       Int
+  errors           Int
+  createdAt        DateTime
+
+  @@index([createdAt])
 }
 
 model QuestionTag {
@@ -307,4 +321,46 @@ model MockExamQuestion {
   @@id([examId, position])
   @@unique([examId, questionId])
   @@index([questionId, questionVersion])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+model Attempt {
+  attemptId         String        @id
+  schoolId          String
+  userId            String
+  examId            String
+  status            AttemptStatus
+  examSnapshot      Json
+  startedAt         DateTime
+  expiresAt         DateTime
+  submittedAt       DateTime?
+  score             Decimal?      @db.Decimal(5, 2)
+  correctAnswers    Int?
+  totalQuestions    Int
+  percentage        Decimal?      @db.Decimal(5, 2)
+  topicResults      Json?
+  result            Json?
+  completedEvent    Json?
+  answers           AttemptAnswer[]
+
+  @@index([schoolId, userId, status])
+  @@index([schoolId, examId])
+  @@unique([schoolId, userId, examId, status])
+}
+
+model AttemptAnswer {
+  attemptId       String
+  questionId      String
+  questionVersion Int
+  selectedOption  String
+  isCorrect       Boolean
+  answeredAt      DateTime
+  attempt         Attempt @relation(fields: [attemptId], references: [attemptId], onDelete: Cascade)
+
+  @@id([attemptId, questionId])
 }

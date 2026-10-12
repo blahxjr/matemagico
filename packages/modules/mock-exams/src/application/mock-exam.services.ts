@@ -161,7 +161,9 @@ export class StartExam {
   async execute(input: { examId: string; schoolId: string }): Promise<{
     examId: string;
     title: string;
-    questions: MockExamView['questions'];
+    questions: readonly (Omit<MockExamView['questions'][number], 'options'> & {
+      readonly options: readonly { readonly label: string; readonly content: string }[];
+    })[];
   }> {
     const exam = await this.deps.exams.findById(input.examId, input.schoolId);
     if (!exam) throw new MockExamsError('EXM-002');
@@ -173,7 +175,14 @@ export class StartExam {
         position,
       })),
     }).assertCanStart(this.deps.clock.now());
-    return { examId: exam.examId, title: exam.title, questions: exam.questions };
+    return {
+      examId: exam.examId,
+      title: exam.title,
+      questions: exam.questions.map((question) => ({
+        ...question,
+        options: question.options.map(({ label, content }) => ({ label, content })),
+      })),
+    };
   }
 }
 

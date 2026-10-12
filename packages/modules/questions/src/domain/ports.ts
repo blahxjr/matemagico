@@ -1,4 +1,4 @@
-import type { Question, QuestionLevel, QuestionStatus } from './question';
+import type { Difficulty, Question, QuestionLevel, QuestionStatus, SourceType } from './question';
 
 export type AddQuestionResult = 'CREATED' | 'CONFLICT';
 
@@ -7,6 +7,9 @@ export interface QuestionFilter {
   readonly topicId?: string;
   readonly status?: QuestionStatus;
   readonly sourceYear?: number;
+  readonly gradeLevel?: string;
+  readonly difficulty?: Difficulty;
+  readonly sourceType?: SourceType;
 }
 
 export interface Page {
@@ -40,6 +43,20 @@ export interface QuestionRepository {
   }): Promise<boolean>;
   existsByFingerprint(fingerprint: string): Promise<boolean>;
   countByStatus(): Promise<Record<QuestionStatus, number>>;
+}
+
+export interface ImportExecutionRepository {
+  record(input: {
+    importExecutionId: string;
+    sourceFileName: string | null;
+    worksheetName: string;
+    processed: number;
+    created: number;
+    duplicates: number;
+    errors: number;
+    createdAt: Date;
+  }): Promise<void>;
+  totalDuplicates(): Promise<number>;
 }
 
 /** Implemented in the composition root over the Topics module. */
