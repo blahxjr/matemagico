@@ -6,6 +6,10 @@ export interface ActorContext {
 /** Server-side check: the actor is an ACTIVE SCHOOL_ADMIN with the applicable Permission in the School. */
 export interface ActorAuthorizer {
   canAdministerSchool(actor: ActorContext, schoolId: string): Promise<boolean>;
+  /** CanActivateMembership: SCHOOL_ADMIN with `membership:activate` in the School. */
+  canActivateMembership(actor: ActorContext, schoolId: string): Promise<boolean>;
+  /** CanGrantRole: SCHOOL_ADMIN with `role:grant` and the Role in the actor's allowlist. */
+  canGrantRole(actor: ActorContext, schoolId: string, roleId: string): Promise<boolean>;
 }
 
 /** Public Users contract (ResolveUser). */

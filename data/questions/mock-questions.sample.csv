@@ -1,0 +1,6 @@
+title,statement,level,topicSlug,sourceName,sourceYear,sourceReference,optionA,optionB,optionC,optionD,correct
+"Aritmética 001","Quanto é 6 + 20?","OBMEP_MIRIM","aritmetica","MOCK","2020","MOCK-CSV-001","26","27","25","36","A"
+"Geometria 002","Qual é o perímetro de um quadrado de lado 3 cm?","OBMEP_MIRIM","geometria","MOCK","2021","MOCK-CSV-002","13","12","11","22","B"
+"Álgebra 003","Se x + 4 = 11, quanto vale x?","OBMEP_MIRIM","algebra","MOCK","2022","MOCK-CSV-003","8","6","7","17","C"
+"Lógica 004","Na sequência 5, 13, 21, 29, qual é o próximo número?","OBMEP_MIRIM","logica","MOCK","2023","MOCK-CSV-004","38","36","47","37","D"
+"Combinatória 005","Com 6 camisas e 9 calças diferentes, de quantas maneiras é possível se vestir?","OBMEP_MIRIM","combinatoria","MOCK","2024","MOCK-CSV-005","54","55","53","64","A"

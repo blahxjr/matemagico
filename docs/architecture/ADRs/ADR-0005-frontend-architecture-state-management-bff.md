@@ -411,7 +411,7 @@ A fonte de verdade permanece no modulo owner. A UI e composition/adapter, nao ca
 
 ### Migration Plan (if applicable)
 
-Nao ha migracao de codigo neste ADR. O arquivo antigo `ADR-0005-state-management-strategy.md` esta marcado como **Superseded** por este ADR, mantendo link historico. ADR-0006/0007/0008 estao **Superseded**; ADR-0010 permanece **Proposed** somente para frontend composition/design-system. Nenhum desses documentos substitui a regra de estado/BFF deste ADR.
+Nao ha migracao de codigo neste ADR. O arquivo antigo `ADR-0005-state-management-strategy.md` esta marcado como **Superseded** por este ADR, mantendo link historico. ADR-0006/0007/0008/0010 estao **Superseded** por este ADR (composicao e design-system cobertos em 2.9). Nenhum desses documentos substitui a regra de estado/BFF deste ADR.
 
 Se ja existir implementacao futura: inventariar cada state/cache por owner e tenant; migrar primeiro leituras canonicas a Server Components; mover mutation para actions adapters + use cases; remover stores/cache de dominio; manter somente UI state local; testar equivalencia, invalidacao e isolamento antes de desligar caminho antigo.
 
@@ -429,7 +429,7 @@ Fora do escopo ate inventario de rotas/codigo. O workspace atual contem document
 - ADR-0002 — Module Boundaries and Domain Communication (ownership e contratos).
 - ADR-0003 — Database Strategy and Domain Data Model (`schoolId`, analytics/read models e persistencia).
 - ADR-0004 — Authentication and Authorization (Auth.js, sessao e RBAC server-side).
-- ADR-0006–ADR-0010 — propostas frontend/analytics existentes; revisar e marcar supersession/escopo antes da aprovacao final deste ADR.
+- ADR-0006–ADR-0010 — propostas frontend/analytics existentes; ADR-0006/0007/0008/0010 marcados Superseded; ADR-0009 (analytics) permanece Proposed.
 
 ---
 

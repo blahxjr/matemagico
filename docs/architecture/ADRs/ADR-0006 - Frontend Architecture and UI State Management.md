@@ -5,7 +5,7 @@
 **Deciders**: Architecture Lead, Frontend Lead, Tech Lead e Product
 **Affects**: apps/web, packages/ui, todos os módulos de domínio, autenticação, analytics e futuras aplicações cliente
 
-> Proposta historica supersedida pelo ADR-0005 (frontend, state e BFF) e pelo ADR-0010 no escopo residual de UI composition/design system. Mantida para rastreabilidade; nao usar como decisao normativa.
+> Proposta historica supersedida pelo ADR-0005 (frontend, state, BFF e composição). Mantida para rastreabilidade; nao usar como decisao normativa.
 
 ---
 

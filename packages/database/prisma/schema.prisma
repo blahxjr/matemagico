@@ -50,6 +50,31 @@ model Session {
   @@index([userId, revokedAt, absoluteExpiresAt, idleExpiresAt])
 }
 
+model AuditEvent {
+  auditId       String   @id
+  occurredAt    DateTime
+  actorUserId   String?
+  actorSchoolId String?
+  action        String
+  targetType    String
+  targetId      String?
+  reason        String?
+  metadata      Json
+
+  @@index([actorUserId, occurredAt])
+  @@index([actorSchoolId, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+}
+
+model LoginAttemptCounter {
+  key              String
+  windowStartedAt  DateTime
+  count            Int
+
+  @@id([key, windowStartedAt])
+  @@index([windowStartedAt])
+}
+
 enum MembershipState {
   PENDING
   ACTIVE
@@ -120,4 +145,265 @@ model Grant {
   role         Role             @relation(fields: [roleId], references: [roleId])
 
   @@index([membershipId, roleId])
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum SchoolStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  userId    String     @id
+  email     String     @unique
+  name      String
+  status    UserStatus
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+model School {
+  schoolId  String       @id
+  name      String
+  slug      String       @unique
+  status    SchoolStatus
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+enum TopicStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum QuestionLevel {
+  OBMEP_MIRIM
+  OBMEP_N1
+  OBMEP_N2
+  OBMEP_N3
+}
+
+enum QuestionStatus {
+  IMPORTED
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum AuthorType {
+  AUTHOR
+  ORGANIZATION
+  UNKNOWN
+}
+
+enum SourceType {
+  OLYMPIAD
+  EXAM
+  BOOK
+  INTERNAL
+  UNKNOWN
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ImageStatus {
+  PENDING
+  VALID
+  BROKEN
+  MISSING
+}
+
+model Topic {
+  topicId       String      @id
+  name          String
+  slug          String      @unique
+  description   String
+  status        TopicStatus
+  parentTopicId String?
+  parentTopic   Topic?      @relation("TopicHierarchy", fields: [parentTopicId], references: [topicId])
+  childTopics   Topic[]     @relation("TopicHierarchy")
+  createdAt     DateTime
+  updatedAt     DateTime
+}
+
+/// One row per (questionId, version). Content is immutable once published; isCurrent marks the latest version.
+model Question {
+  questionId      String
+  version         Int
+  title           String
+  statement       String
+  level           QuestionLevel?
+  sourceName      String
+  sourceYear      Int?
+  sourceReference String?
+  sourceNotes     String?
+  sourceType      SourceType @default(UNKNOWN)
+  legacyId        String?
+  authorName      String     @default("Unknown")
+  authorType      AuthorType @default(UNKNOWN)
+  authorVerified  Boolean    @default(false)
+  gradeLevel      String?
+  difficulty      QuestionDifficulty?
+  explanation     String?
+  imageUrl        String?
+  imageStatus     ImageStatus @default(MISSING)
+  imageHash       String?
+  status          QuestionStatus
+  topicId         String
+  isCurrent       Boolean
+  createdAt       DateTime
+  updatedAt       DateTime
+  publishedAt     DateTime?
+  options         QuestionOption[]
+  tags            QuestionTag[]
+  examReferences  MockExamQuestion[]
+
+  @@id([questionId, version])
+  @@index([status, level, topicId])
+  @@index([isCurrent, status])
+  @@index([sourceName, sourceYear, sourceReference])
+  @@index([legacyId])
+}
+
+model ImportExecution {
+  importExecutionId String   @id
+  sourceFileName   String?
+  worksheetName    String
+  processed        Int
+  created          Int
+  duplicates       Int
+  errors           Int
+  createdAt        DateTime
+
+  @@index([createdAt])
+}
+
+model QuestionTag {
+  questionId String
+  version    Int
+  tag        String
+  question   Question @relation(fields: [questionId, version], references: [questionId, version], onDelete: Cascade)
+
+  @@id([questionId, version, tag])
+  @@index([tag])
+}
+
+model QuestionOption {
+  optionId   String   @id
+  questionId String
+  version    Int
+  label      String
+  content    String
+  isCorrect  Boolean
+  question   Question @relation(fields: [questionId, version], references: [questionId, version], onDelete: Cascade)
+
+  @@unique([questionId, version, label])
+}
+
+enum MockExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model MockExam {
+  examId          String             @id
+  title           String
+  description     String?
+  schoolId        String
+  level           QuestionLevel
+  status          MockExamStatus
+  durationMinutes Int
+  availableFrom   DateTime?
+  availableUntil  DateTime?
+  createdAt       DateTime
+  updatedAt       DateTime
+  publishedAt     DateTime?
+  questions       MockExamQuestion[]
+
+  @@index([schoolId, status, availableFrom, availableUntil])
+}
+
+model MockExamQuestion {
+  examId          String
+  questionId      String
+  questionVersion Int
+  position        Int
+  exam            MockExam @relation(fields: [examId], references: [examId], onDelete: Cascade)
+  question        Question @relation(fields: [questionId, questionVersion], references: [questionId, version], onDelete: Restrict)
+
+  @@id([examId, position])
+  @@unique([examId, questionId])
+  @@index([questionId, questionVersion])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+model Attempt {
+  attemptId         String        @id
+  schoolId          String
+  userId            String
+  examId            String
+  status            AttemptStatus
+  examSnapshot      Json
+  startedAt         DateTime
+  expiresAt         DateTime
+  submittedAt       DateTime?
+  score             Decimal?      @db.Decimal(5, 2)
+  correctAnswers    Int?
+  totalQuestions    Int
+  percentage        Decimal?      @db.Decimal(5, 2)
+  topicResults      Json?
+  result            Json?
+  completedEvent    Json?
+  answers           AttemptAnswer[]
+
+  @@index([schoolId, userId, status])
+  @@index([schoolId, examId])
+  @@unique([schoolId, userId, examId, status])
+}
+
+model AttemptAnswer {
+  attemptId       String
+  questionId      String
+  questionVersion Int
+  selectedOption  String
+  isCorrect       Boolean
+  answeredAt      DateTime
+  attempt         Attempt @relation(fields: [attemptId], references: [attemptId], onDelete: Cascade)
+
+  @@id([attemptId, questionId])
+}
+
+/// Read model projected from AttemptCompleted; one row per completed attempt.
+model RankingEntry {
+  id               String   @id
+  schoolId         String
+  examId           String
+  studentId        String
+  attemptId        String   @unique
+  score            Decimal  @db.Decimal(5, 2)
+  correctAnswers   Int
+  timeSpentSeconds Int
+  completedAt      DateTime
+  createdAt        DateTime
+  updatedAt        DateTime
+
+  @@index([schoolId, studentId])
+  @@index([schoolId, examId])
 }

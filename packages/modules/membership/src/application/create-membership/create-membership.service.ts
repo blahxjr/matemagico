@@ -51,7 +51,7 @@ export class CreateMembershipService {
         'MEM-005',
       ))
     ) {
-      throw new MembershipError('MEM-005');
+      throw MembershipError.accessDenied();
     }
     if (!(await this.attempt(() => this.deps.users.isActiveUser(input.userId), 'MEM-002'))) {
       throw new MembershipError('MEM-002');

@@ -35,6 +35,7 @@ export type { PasswordVerifier } from './application/ports/password-verifier';
 export type { Clock, SessionIdGenerator } from './application/ports/runtime';
 export type { UserIdentity, UserRepository } from './application/ports/user.repository';
 export { InMemoryLoginAttemptLimiter } from './infrastructure/rate-limit/in-memory-login-attempt-limiter';
+export { PrismaLoginAttemptLimiter } from './infrastructure/rate-limit/prisma-login-attempt-limiter';
 export { systemClock, uuidSessionIdGenerator } from './infrastructure/runtime/system-runtime';
 export { AuthAccount, AUTH_PROVIDER } from './domain/entities/auth-account';
 export { PasswordCredential } from './domain/entities/password-credential';
@@ -63,8 +64,25 @@ export type {
   UserId,
 } from './domain/value-objects/identifiers';
 export type { Argon2idParameters } from './domain/value-objects/password-hash';
+export type { HashedPassword, PasswordHasher } from './application/ports/password-hasher';
+export type {
+  CreateCredentialResult,
+  CredentialStore,
+} from './domain/repositories/credential-store';
+export {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  ProvisionPasswordCredentialService,
+} from './application/provision-password-credential/provision-password-credential.service';
+export type { ProvisionPasswordCredentialInput } from './application/provision-password-credential/provision-password-credential.service';
+export {
+  Argon2idPasswordHasher,
+  Argon2idPasswordVerifier,
+  OWASP_ARGON2ID_PARAMETERS,
+} from './infrastructure/crypto/argon2id';
 export {
   AuthAccountPrismaRepository,
+  CredentialPrismaStore,
   PasswordCredentialPrismaRepository,
   SessionPrismaRepository,
 } from './infrastructure/persistence/prisma';

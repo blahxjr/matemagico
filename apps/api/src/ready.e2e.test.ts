@@ -3,13 +3,41 @@ import { fakePrisma, startApp } from './test-support';
 
 describe('GET /ready', () => {
   it('is ready when the composition is wired and the database answers', async () => {
-    const db = fakePrisma(async () => [{ '?column?': 1 }]);
+    const db = fakePrisma(async () => [
+      {
+        databaseAvailable: 1,
+        migrationTableAvailable: true,
+        migrationsComplete: true,
+        auditPersistenceAvailable: true,
+        rateLimitPersistenceAvailable: true,
+      },
+    ]);
     const app = await startApp(db.prisma);
     try {
       const res = await fetch(`${app.url}/ready`);
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ status: 'ready' });
       expect(db.calls.count).toBe(1);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('is not_ready when migrations or persistent dependencies are unavailable', async () => {
+    const db = fakePrisma(async () => [
+      {
+        databaseAvailable: 1,
+        migrationTableAvailable: true,
+        migrationsComplete: true,
+        auditPersistenceAvailable: false,
+        rateLimitPersistenceAvailable: true,
+      },
+    ]);
+    const app = await startApp(db.prisma);
+    try {
+      const res = await fetch(`${app.url}/ready`);
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ status: 'not_ready' });
     } finally {
       await app.close();
     }

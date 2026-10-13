@@ -37,6 +37,8 @@ describe.skipIf(!prisma)('Membership and School Context services on Prisma adapt
   const schoolDirectory = { isEnabledSchool: async (id: string) => schools.has(id) };
   const authorizer = {
     canAdministerSchool: async (a: { userId: string }) => a.userId === 'admin-1',
+    canActivateMembership: async (a: { userId: string }) => a.userId === 'admin-1',
+    canGrantRole: async (a: { userId: string }) => a.userId === 'admin-1',
   };
   const events = {
     publishMembershipCreated: async () => undefined,
@@ -105,7 +107,7 @@ describe.skipIf(!prisma)('Membership and School Context services on Prisma adapt
     await client.role.create({
       data: {
         roleId: 'teacher',
-        code: 'TEACHER',
+        code: 'TEST_TEACHER',
         scope: 'SCHOOL',
         status: 'APPROVED',
         privileged: false,

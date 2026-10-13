@@ -141,10 +141,30 @@ describe('GrantRoleService', () => {
     expect(h.grants.store.size).toBe(0);
   });
 
+  it('uses canGrantRole with the requested Role and marks the denial as an access decision', async () => {
+    const { h, membershipId } = await active();
+    const asked: string[] = [];
+    h.authorizer.canGrantRole = async (_actor, _schoolId, roleId) => {
+      asked.push(roleId);
+      return false;
+    };
+    const error = await h.grantRole(membershipId, { roleId: 'school-admin' }).catch((e) => e);
+    expect(error).toMatchObject({ code: 'MEM-005', denied: true });
+    expect(asked).toEqual(['school-admin']);
+    expect(h.grants.store.size).toBe(0);
+  });
+
+  it('keeps an unavailable authorizer distinct from a denial', async () => {
+    const { h, membershipId } = await active();
+    h.authorizer.failing = true;
+    const error = await h.grantRole(membershipId).catch((e) => e);
+    expect(error).toMatchObject({ code: 'MEM-005', denied: false });
+  });
+
   it('authorizes against the School of the Membership, not another School', async () => {
     const { h, membershipId } = await active();
     const asked: string[] = [];
-    h.authorizer.canAdministerSchool = async (_actor, schoolId) => {
+    h.authorizer.canGrantRole = async (_actor, schoolId) => {
       asked.push(schoolId);
       return false;
     };

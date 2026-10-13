@@ -8,15 +8,27 @@
     "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "test:db": "vitest run src/real-ports.db.test.ts"
   },
   "dependencies": {
     "@matemagico/auth": "*",
+    "@matemagico/attempts": "*",
+    "@matemagico/audit": "*",
+    "@matemagico/events": "*",
+    "@matemagico/logger": "*",
     "@matemagico/membership": "*",
+    "@matemagico/mock-exams": "*",
+    "@matemagico/question-engine": "*",
+    "@matemagico/questions": "*",
+    "@matemagico/rankings": "*",
+    "@matemagico/schools": "*",
+    "@matemagico/topics": "*",
+    "@matemagico/users": "*",
     "@prisma/client": "^6.7.0"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "vitest": "^3.0.8"
+    "vitest": "^4.1.11"
   }
 }

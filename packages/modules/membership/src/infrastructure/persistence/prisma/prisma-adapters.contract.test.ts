@@ -132,7 +132,7 @@ const membership = (
 
 const teacher = Role.restore({
   roleId: 'teacher',
-  code: 'TEACHER',
+  code: 'TEST_TEACHER',
   scope: 'SCHOOL',
   status: 'APPROVED',
   privileged: false,
@@ -227,7 +227,7 @@ function repositoryContract(name: string, create: () => Backend, skip = false) {
       it('finds a catalog Role and answers null for an unknown one', async () => {
         await b.seedRole(teacher);
         const found = await b.roles.findById(roleId('teacher'));
-        expect(found).toMatchObject({ code: 'TEACHER', scope: 'SCHOOL', status: 'APPROVED' });
+        expect(found).toMatchObject({ code: 'TEST_TEACHER', scope: 'SCHOOL', status: 'APPROVED' });
         expect(found?.isGrantableInSchool).toBe(true);
         expect(await b.roles.findById(roleId('ghost'))).toBeNull();
       });
