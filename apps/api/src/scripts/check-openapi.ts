@@ -1,39 +1,31 @@
-import { writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { buildOpenApiDocument } from '../openapi';
+import { serializeOpenApiDocument } from '../openapi-serialization';
 
-function sortKeysDeep(value: any): any {
-  if (Array.isArray(value)) return value.map(sortKeysDeep);
-  if (value && typeof value === 'object' && !(value instanceof Date)) {
-    const out: Record<string, any> = {};
-    for (const k of Object.keys(value).sort()) out[k] = sortKeysDeep(value[k]);
-    return out;
+async function main() {
+  const target = resolve(process.cwd(), '../../docs/api/openapi.json');
+  const first = await serializeOpenApiDocument(buildOpenApiDocument(), target);
+  const second = await serializeOpenApiDocument(buildOpenApiDocument(), target);
+
+  if (first !== second) {
+    console.error('ERROR: consecutive OpenAPI generations differ');
+    process.exitCode = 2;
+    return;
   }
-  return value;
+
+  const committed = readFileSync(target, 'utf8');
+  if (first !== committed) {
+    console.error(
+      'ERROR: docs/api/openapi.json is out of sync; run npm run openapi --workspace @matemagico/api',
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(
+    'OK: generated OpenAPI matches the committed file and consecutive generations are identical',
+  );
 }
 
-function canonicalizeStringify(obj: any) {
-  return JSON.stringify(sortKeysDeep(obj), null, 2);
-}
-
-(async function main() {
-  const t1 = join(tmpdir(), `openapi-1-${Date.now()}.json`);
-  const t2 = join(tmpdir(), `openapi-2-${Date.now()}.json`);
-
-  const doc1 = canonicalizeStringify(buildOpenApiDocument());
-  writeFileSync(t1, doc1 + '\n');
-  const doc2 = canonicalizeStringify(buildOpenApiDocument());
-  writeFileSync(t2, doc2 + '\n');
-
-  if (doc1 === doc2) {
-    console.log('OK: two consecutive generations are identical');
-    console.log('temp files:');
-    console.log('  ', t1);
-    console.log('  ', t2);
-    process.exit(0);
-  } else {
-    console.error('ERROR: consecutive generations differ');
-    process.exit(2);
-  }
-})();
+main();
