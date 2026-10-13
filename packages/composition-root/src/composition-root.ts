@@ -7,7 +7,7 @@ import {
   AuthenticateUserService,
   CredentialPrismaStore,
   GetSessionService,
-  InMemoryLoginAttemptLimiter,
+  PrismaLoginAttemptLimiter,
   LogoutUserService,
   PasswordCredentialPrismaRepository,
   ProvisionPasswordCredentialService,
@@ -26,6 +26,7 @@ import {
   ActivateMembershipService,
   CreateMembershipService,
   GrantBasedActorAuthorizer,
+  InMemoryPermissionCache,
   GrantPrismaRepository,
   GrantRoleService,
   PermissionPrismaRepository,
@@ -42,6 +43,7 @@ import {
   type SchoolDirectory,
   type UserDirectory,
 } from '@matemagico/membership';
+import { PrismaAuditRepository, RecordAuditEvent } from '@matemagico/audit';
 import {
   CreateSchoolService,
   DeactivateSchoolService,
@@ -82,15 +84,27 @@ import {
   ListMockExams,
   PrismaMockExamRepository,
   PublishMockExam,
+  UpdateMockExam,
   StartExam,
 } from '@matemagico/mock-exams';
 import {
   ExpireAttempt,
   FinishAttempt,
+  GetAttempt,
+  GetAttemptHistory,
+  GetSchoolPerformance,
   PrismaAttemptRepository,
   StartAttempt,
   SubmitAnswer,
 } from '@matemagico/attempts';
+import {
+  GetExamRanking,
+  GetSchoolRanking,
+  PrismaRankingRepository,
+  RankingProjectionHandler,
+  UpdateRankingFromAttemptCompleted,
+} from '@matemagico/rankings';
+import { AttemptCompletedDispatcher, ListSchoolMembersService } from './admin-services';
 import {
   CreateTopicService,
   DeactivateTopicService,
@@ -154,13 +168,16 @@ export interface CompositionRoot {
     readonly questions: PrismaQuestionRepository;
     readonly mockExams: PrismaMockExamRepository;
     readonly attempts: PrismaAttemptRepository;
+    readonly rankings: PrismaRankingRepository;
+    readonly audit: PrismaAuditRepository;
   };
   readonly directories: {
     readonly users: UsersDirectory;
     readonly schools: SchoolsDirectory;
     readonly topics: TopicDirectory;
   };
-  readonly actorAuthorizer: GrantBasedActorAuthorizer;
+  readonly actorAuthorizer: InMemoryPermissionCache;
+  readonly permissionCache: InMemoryPermissionCache;
   /** Shared with the login flow; also throttles public registration per IP. */
   readonly attemptLimiter: LoginAttemptLimiter;
   readonly services: {
@@ -211,6 +228,7 @@ export interface CompositionRoot {
     readonly validateQuestionSet: ValidateQuestionSet;
     readonly createMockExam: CreateMockExam;
     readonly publishMockExam: PublishMockExam;
+    readonly updateMockExam: UpdateMockExam;
     readonly archiveMockExam: ArchiveMockExam;
     readonly getMockExam: GetMockExam;
     readonly listMockExams: ListMockExams;
@@ -219,6 +237,15 @@ export interface CompositionRoot {
     readonly submitAnswer: SubmitAnswer;
     readonly finishAttempt: FinishAttempt;
     readonly expireAttempt: ExpireAttempt;
+    readonly getAttempt: GetAttempt;
+    readonly getAttemptHistory: GetAttemptHistory;
+    readonly getSchoolPerformance: GetSchoolPerformance;
+    readonly getSchoolRanking: GetSchoolRanking;
+    readonly getExamRanking: GetExamRanking;
+    readonly rankingProjectionHandler: RankingProjectionHandler;
+    readonly attemptCompletedDispatcher: AttemptCompletedDispatcher;
+    readonly listSchoolMembers: ListSchoolMembersService;
+    readonly recordAuditEvent: RecordAuditEvent;
   };
 }
 
@@ -245,6 +272,8 @@ export function createCompositionRoot(
     importExecutions: new PrismaImportExecutionRepository(prisma),
     mockExams: new PrismaMockExamRepository(prisma),
     attempts: new PrismaAttemptRepository(prisma),
+    rankings: new PrismaRankingRepository(prisma),
+    audit: new PrismaAuditRepository(prisma),
   };
 
   const directories = {
@@ -267,13 +296,14 @@ export function createCompositionRoot(
   const users = overrides.userRepository ?? authUsers;
   const userDirectory = overrides.userDirectory ?? directories.users;
   const schools = overrides.schoolDirectory ?? directories.schools;
-  const actorAuthorizer = new GrantBasedActorAuthorizer({
+  const baseActorAuthorizer = new GrantBasedActorAuthorizer({
     memberships: repositories.memberships,
     grants: repositories.grants,
     roles: repositories.roles,
     permissions: repositories.permissions,
     clock,
   });
+  const actorAuthorizer = new InMemoryPermissionCache(baseActorAuthorizer);
   const membershipAuthorizer = overrides.actorAuthorizer ?? actorAuthorizer;
   const resolveSchoolContext = new ResolveSchoolContextService({
     memberships: repositories.memberships,
@@ -282,7 +312,7 @@ export function createCompositionRoot(
     clock,
   });
 
-  const attemptLimiter = overrides.attemptLimiter ?? new InMemoryLoginAttemptLimiter();
+  const attemptLimiter = overrides.attemptLimiter ?? new PrismaLoginAttemptLimiter(prisma);
   const getSession = new GetSessionService({ sessions: repositories.sessions, users, clock });
   const revokeSession = new RevokeSessionService({
     sessions: repositories.sessions,
@@ -325,6 +355,10 @@ export function createCompositionRoot(
     topics: directories.topics,
     clock,
   });
+
+  const rankingProjectionHandler = new RankingProjectionHandler(
+    new UpdateRankingFromAttemptCompleted(repositories.rankings, clock),
+  );
 
   const services = {
     generateQuestionSet: new GenerateQuestionSet(new PrismaQuestionCatalog(prisma)),
@@ -454,6 +488,7 @@ export function createCompositionRoot(
       repositories.importExecutions,
     ),
     publishMockExam: new PublishMockExam({ exams: repositories.mockExams, clock }),
+    updateMockExam: new UpdateMockExam({ exams: repositories.mockExams, clock }),
     archiveMockExam: new ArchiveMockExam({ exams: repositories.mockExams, clock }),
     getMockExam: new GetMockExam(repositories.mockExams),
     listMockExams: new ListMockExams(repositories.mockExams),
@@ -467,6 +502,22 @@ export function createCompositionRoot(
     submitAnswer: new SubmitAnswer({ attempts: repositories.attempts, clock }),
     finishAttempt: new FinishAttempt({ attempts: repositories.attempts, clock }),
     expireAttempt: new ExpireAttempt({ attempts: repositories.attempts, clock }),
+    getAttempt: new GetAttempt({ attempts: repositories.attempts }),
+    getAttemptHistory: new GetAttemptHistory({ attempts: repositories.attempts }),
+    getSchoolPerformance: new GetSchoolPerformance({ attempts: repositories.attempts }),
+    getSchoolRanking: new GetSchoolRanking(repositories.rankings),
+    getExamRanking: new GetExamRanking(repositories.rankings),
+    rankingProjectionHandler,
+    attemptCompletedDispatcher: new AttemptCompletedDispatcher({
+      prisma,
+      handler: rankingProjectionHandler,
+    }),
+    listSchoolMembers: new ListSchoolMembersService({ prisma, clock }),
+    recordAuditEvent: new RecordAuditEvent({
+      repository: repositories.audit,
+      now: () => clock.now(),
+      nextId: () => randomUUID(),
+    }),
   };
 
   const foundSchool = new FoundSchoolService({
@@ -484,6 +535,7 @@ export function createCompositionRoot(
     repositories,
     directories,
     actorAuthorizer,
+    permissionCache: actorAuthorizer,
     attemptLimiter,
     services: {
       ...services,

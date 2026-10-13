@@ -16,6 +16,7 @@ if (databaseUrl !== testDatabaseUrl) {
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const workspaces = [
   '@matemagico/auth',
+  '@matemagico/audit',
   '@matemagico/users',
   '@matemagico/schools',
   '@matemagico/topics',

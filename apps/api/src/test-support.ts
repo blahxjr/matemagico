@@ -8,6 +8,7 @@ import {
   type CompositionRoot,
 } from '@matemagico/composition-root';
 import { createApp, type AppOptions } from './app';
+import { InMemoryLoginAttemptLimiter } from '@matemagico/auth';
 
 /** Prisma double that proves whether the database was touched. */
 export function fakePrisma(query: () => Promise<unknown>) {
@@ -26,7 +27,10 @@ export async function startApp(
   overrides?: CompositionOverrides,
   options?: AppOptions,
 ) {
-  const root: CompositionRoot = createCompositionRoot(prisma, overrides);
+  const root: CompositionRoot = createCompositionRoot(prisma, {
+    attemptLimiter: new InMemoryLoginAttemptLimiter(),
+    ...overrides,
+  });
   const server: Server = createApp(root, options);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
@@ -66,6 +70,7 @@ export async function ensureRoles(prisma: PrismaClient): Promise<void> {
     'question:publish',
     'exam:create',
     'exam:publish',
+    'report:read',
   ];
   const roles = [
     ['STUDENT', false, ['school:read']],
@@ -76,6 +81,7 @@ export async function ensureRoles(prisma: PrismaClient): Promise<void> {
       [
         'membership:create',
         'membership:activate',
+        'membership:read',
         'role:grant',
         'school:read',
         'school:update',

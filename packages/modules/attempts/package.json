@@ -12,6 +12,7 @@
     "test:db": "vitest run src/infrastructure/prisma-attempt.repository.db.test.ts"
   },
   "dependencies": {
+    "@matemagico/events": "*",
     "@matemagico/mock-exams": "*",
     "@prisma/client": "^6.7.0"
   },

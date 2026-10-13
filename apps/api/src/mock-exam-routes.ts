@@ -9,7 +9,9 @@ import {
   mockExamActionBody,
   mockExamGetQuery,
   mockExamListQuery,
+  updateMockExamBody,
 } from './schemas';
+import { recordAudit } from './audit';
 
 const COLLECTION_PATH = '/exams';
 const ITEM_PATH = /^\/exams\/([^/]+)$/;
@@ -18,6 +20,7 @@ const ACTION_PATH = /^\/exams\/([^/]+)\/(publish|archive|start)$/;
 const publicExam = <
   T extends {
     questions: readonly {
+      explanation?: string | null;
       options: readonly { label: string; content: string; isCorrect: boolean }[];
     }[];
   },
@@ -25,7 +28,7 @@ const publicExam = <
   exam: T,
 ) => ({
   ...exam,
-  questions: exam.questions.map((question) => ({
+  questions: exam.questions.map(({ explanation: _explanation, ...question }) => ({
     ...question,
     options: question.options.map(({ label, content }) => ({ label, content })),
   })),
@@ -41,7 +44,7 @@ export function handleMockExamRoute(
   const action = ACTION_PATH.exec(path);
   if (path !== COLLECTION_PATH && !item && !action) return false;
 
-  const allowed = action ? ['POST'] : item ? ['GET'] : ['GET', 'POST'];
+  const allowed = action ? ['POST'] : item ? ['GET', 'PATCH'] : ['GET', 'POST'];
   if (!allowed.includes(req.method ?? '')) {
     methodNotAllowed(res, allowed.join(', '));
     return true;
@@ -57,7 +60,11 @@ export function handleMockExamRoute(
         action[2] as 'publish' | 'archive' | 'start',
       );
     }
-    if (item) return get(root, req, res, parseParam(item[1]));
+    if (item) {
+      return req.method === 'PATCH'
+        ? update(root, req, res, parseParam(item[1]))
+        : get(root, req, res, parseParam(item[1]));
+    }
     return req.method === 'GET' ? list(root, req, res) : create(root, req, res);
   };
   void run().catch((error) => sendError(res, error, 'EXM-006'));
@@ -101,8 +108,40 @@ async function get(
   sendJson(res, 200, publicExam(exam));
 }
 
+async function update(
+  root: CompositionRoot,
+  req: IncomingMessage,
+  res: ServerResponse,
+  examId: string,
+) {
+  const actor = await authenticate(root, req);
+  const { schoolId, ...changes } = await readBody(req, updateMockExamBody);
+  await authorize(root, req, { schoolId, action: 'exam:create' });
+  const exam = await root.services.updateMockExam.execute({
+    examId,
+    schoolId,
+    ...(changes.title !== undefined ? { title: changes.title } : {}),
+    ...(changes.description !== undefined ? { description: changes.description } : {}),
+    ...(changes.durationMinutes !== undefined ? { durationMinutes: changes.durationMinutes } : {}),
+    ...(changes.availableFrom !== undefined
+      ? { availableFrom: changes.availableFrom ? new Date(changes.availableFrom) : null }
+      : {}),
+    ...(changes.availableUntil !== undefined
+      ? { availableUntil: changes.availableUntil ? new Date(changes.availableUntil) : null }
+      : {}),
+  });
+  await recordAudit(root, {
+    actorUserId: actor.userId,
+    actorSchoolId: schoolId,
+    action: 'exam.updated',
+    targetType: 'MockExam',
+    targetId: examId,
+  });
+  sendJson(res, 200, publicExam(exam));
+}
+
 async function create(root: CompositionRoot, req: IncomingMessage, res: ServerResponse) {
-  await authenticate(root, req);
+  const actor = await authenticate(root, req);
   const body = await readBody(req, createMockExamBody);
   await authorize(root, req, { schoolId: body.schoolId, action: 'exam:create' });
   const exam = await root.services.createMockExam.execute({
@@ -117,6 +156,13 @@ async function create(root: CompositionRoot, req: IncomingMessage, res: ServerRe
     availableFrom: body.availableFrom ? new Date(body.availableFrom) : null,
     availableUntil: body.availableUntil ? new Date(body.availableUntil) : null,
   });
+  await recordAudit(root, {
+    actorUserId: actor.userId,
+    actorSchoolId: body.schoolId,
+    action: 'exam.created',
+    targetType: 'MockExam',
+    targetId: exam.examId,
+  });
   sendJson(res, 201, publicExam(exam));
 }
 
@@ -127,7 +173,7 @@ async function act(
   examId: string,
   action: 'publish' | 'archive' | 'start',
 ) {
-  await authenticate(root, req);
+  const actor = await authenticate(root, req);
   const body = await readBody(req, mockExamActionBody);
   if (action === 'start') {
     await authorize(root, req, { schoolId: body.schoolId, action: 'school:read' });
@@ -140,5 +186,12 @@ async function act(
     action === 'publish'
       ? await root.services.publishMockExam.execute({ examId, schoolId: body.schoolId })
       : await root.services.archiveMockExam.execute({ examId, schoolId: body.schoolId });
+  await recordAudit(root, {
+    actorUserId: actor.userId,
+    actorSchoolId: body.schoolId,
+    action: action === 'publish' ? 'exam.published' : 'exam.archived',
+    targetType: 'MockExam',
+    targetId: examId,
+  });
   sendJson(res, 200, publicExam(result));
 }

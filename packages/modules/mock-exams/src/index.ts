@@ -11,6 +11,7 @@ export {
   GetMockExam,
   ListMockExams,
   PublishMockExam,
+  UpdateMockExam,
   StartExam,
   examStatus,
 } from './application/mock-exam.services';

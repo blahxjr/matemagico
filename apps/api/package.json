@@ -8,7 +8,7 @@
     "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:db": "vitest run src/auth-login.db.e2e.test.ts src/auth-register-logout.e2e.test.ts src/membership.e2e.test.ts src/schools.e2e.test.ts src/questions.e2e.test.ts src/mock-exams.e2e.test.ts src/attempts.e2e.test.ts",
+    "test:db": "vitest run src/auth-login.db.e2e.test.ts src/auth-register-logout.e2e.test.ts src/membership.e2e.test.ts src/schools.e2e.test.ts src/questions.e2e.test.ts src/mock-exams.e2e.test.ts src/attempts.e2e.test.ts src/rankings.e2e.test.ts",
     "openapi": "tsx src/generate-openapi.ts",
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },

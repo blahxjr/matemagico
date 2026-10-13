@@ -2,6 +2,9 @@ import { z } from 'zod';
 import {
   activateMembershipBody,
   attemptActionBody,
+  attemptGetQuery,
+  attemptHistoryQuery,
+  attemptHistoryResponse,
   attemptResponse,
   createMembershipBody,
   createMockExamBody,
@@ -16,6 +19,8 @@ import {
   loginBody,
   logoutResponse,
   meResponse,
+  meExportResponse,
+  deactivateMeResponse,
   membershipActivatedResponse,
   membershipCreatedResponse,
   questionActionBody,
@@ -42,6 +47,11 @@ import {
   topicListResponse,
   topicResponse,
   updateTopicBody,
+  updateMockExamBody,
+  schoolScopedQuery,
+  membersResponse,
+  rankingResponse,
+  performanceResponse,
   updateQuestionBody,
   versionQuestionBody,
   xlsxImportHeaders,
@@ -141,7 +151,47 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/me/export': {
+        get: {
+          summary: 'Export the authenticated user profile, memberships and attempts',
+          security: secured,
+          responses: {
+            '200': { description: 'Personal data export', content: json(meExportResponse) },
+            ...errors([401, 'AUTH-003'], [503, 'AUTH-004']),
+          },
+        },
+      },
+      '/me/deactivate': {
+        post: {
+          summary: 'Logically deactivate the authenticated user and revoke their sessions',
+          security: secured,
+          responses: {
+            '200': { description: 'User deactivated', content: json(deactivateMeResponse) },
+            ...errors([401, 'AUTH-003'], [503, 'AUTH-004']),
+          },
+        },
+      },
+      '/metrics': {
+        get: {
+          summary: 'Prometheus metrics endpoint',
+          responses: {
+            '200': {
+              description: 'Metrics in Prometheus text exposition format',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
       '/memberships': {
+        get: {
+          summary: 'List Memberships of a School with roles (requires membership:read)',
+          security: secured,
+          parameters: [...queryParams(schoolScopedQuery)],
+          responses: {
+            '200': { description: 'Members', content: json(membersResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
         post: {
           summary: 'Create a Membership (requires membership:create)',
           security: secured,
@@ -525,6 +575,22 @@ export function buildOpenApiDocument() {
             ),
           },
         },
+        patch: {
+          summary: 'Edit a DRAFT exam (requires exam:create); published exams are immutable',
+          security: secured,
+          parameters: [idParam('examId')],
+          requestBody: { required: true, content: json(updateMockExamBody) },
+          responses: {
+            '200': { description: 'Updated exam', content: json(mockExamResponse) },
+            ...errors(
+              [400, 'INVALID_REQUEST / EXM-001 / EXM-004'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [404, 'EXM-002'],
+              [409, 'EXM-003'],
+            ),
+          },
+        },
       },
       '/exams/{examId}/publish': {
         post: {
@@ -622,6 +688,66 @@ export function buildOpenApiDocument() {
           responses: {
             '200': { description: 'Expired result', content: json(attemptResponse) },
             ...errors([401, 'AUTH-003'], [403, 'SC-002..004'], [404, 'ATT-002']),
+          },
+        },
+      },
+      '/attempts/history': {
+        get: {
+          summary: 'List attempt history for the authenticated learner',
+          security: secured,
+          parameters: [...queryParams(attemptHistoryQuery)],
+          responses: {
+            '200': { description: 'Attempt history', content: json(attemptHistoryResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
+      '/rankings/school': {
+        get: {
+          summary: 'School ranking (requires report:read; STUDENT is denied)',
+          security: secured,
+          parameters: [...queryParams(schoolScopedQuery)],
+          responses: {
+            '200': { description: 'Ranking', content: json(rankingResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
+      '/rankings/exams/{examId}': {
+        get: {
+          summary: 'Exam ranking (requires report:read; STUDENT is denied)',
+          security: secured,
+          parameters: [idParam('examId'), ...queryParams(schoolScopedQuery)],
+          responses: {
+            '200': { description: 'Ranking', content: json(rankingResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
+      '/performance/school': {
+        get: {
+          summary: 'Per-student and per-topic performance (requires report:read)',
+          security: secured,
+          parameters: [...queryParams(schoolScopedQuery)],
+          responses: {
+            '200': { description: 'Performance', content: json(performanceResponse) },
+            ...errors([400, 'INVALID_REQUEST'], [401, 'AUTH-003'], [403, 'SC-002..004']),
+          },
+        },
+      },
+      '/attempts/{attemptId}': {
+        get: {
+          summary: 'Get an attempt for the authenticated learner',
+          security: secured,
+          parameters: [idParam('attemptId'), ...queryParams(attemptGetQuery)],
+          responses: {
+            '200': { description: 'Attempt details', content: json(attemptResponse) },
+            ...errors(
+              [400, 'INVALID_REQUEST'],
+              [401, 'AUTH-003'],
+              [403, 'SC-002..004'],
+              [404, 'ATT-002'],
+            ),
           },
         },
       },

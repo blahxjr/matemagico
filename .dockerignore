@@ -1,0 +1,17 @@
+.git
+node_modules
+**/node_modules
+**/.next
+**/.turbo
+**/coverage
+.env
+.env.*
+coverage
+playwright-report
+test-results
+.vscode
+.kilo
+prompts
+memory
+docs
+tests

@@ -73,6 +73,44 @@ describe.skipIf(!databaseUrl)('register, me and logout', () => {
     });
   });
 
+  it('GET /me/export returns the user profile and memberships, and audits the export', async () => {
+    const user = await signUp(app, 'export');
+    const schoolId = await foundSchool(app, user);
+    const response = await getJson(`${app.url}/me/export`, user.token);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      profile: { userId: string };
+      memberships: Array<{ schoolId: string; state: string }>;
+      attempts: unknown[];
+    };
+    expect(body.profile.userId).toBe(user.userId);
+    expect(body.memberships).toContainEqual(expect.objectContaining({ schoolId, state: 'ACTIVE' }));
+    expect(body.attempts).toEqual([]);
+    expect(JSON.stringify(body)).not.toMatch(/password|credential|sessionId/i);
+    expect(
+      await prisma.auditEvent.count({
+        where: { actorUserId: user.userId, action: 'privacy.data.exported' },
+      }),
+    ).toBe(1);
+  });
+
+  it('POST /me/deactivate logically disables the user and revokes active sessions', async () => {
+    const user = await signUp(app, 'deactivate');
+    const response = await postJson(`${app.url}/me/deactivate`, {}, false, user.token);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ result: 'DEACTIVATED' });
+    expect(await prisma.user.findUnique({ where: { userId: user.userId } })).toMatchObject({
+      status: 'INACTIVE',
+    });
+    expect(await prisma.session.count({ where: { userId: user.userId, revokedAt: null } })).toBe(0);
+    expect((await getJson(`${app.url}/auth/me`, user.token)).status).toBe(401);
+    expect(
+      await prisma.auditEvent.count({
+        where: { actorUserId: user.userId, action: 'privacy.user.deactivated' },
+      }),
+    ).toBe(1);
+  });
+
   it('GET /auth/me without or with an invalid token -> 401 AUTH-003', async () => {
     for (const token of [undefined, 'unknown-session']) {
       const res = await getJson(`${app.url}/auth/me`, token);
@@ -87,6 +125,11 @@ describe.skipIf(!databaseUrl)('register, me and logout', () => {
     const out = await postJson(`${app.url}/auth/logout`, {}, false, user.token);
     expect(out.status).toBe(200);
     expect(await out.json()).toEqual({ result: 'REVOKED' });
+    expect(
+      await prisma.auditEvent.count({
+        where: { actorUserId: user.userId, action: 'auth.logout' },
+      }),
+    ).toBe(1);
     const me = await getJson(`${app.url}/auth/me`, user.token);
     expect(me.status).toBe(401);
     const again = await postJson(`${app.url}/auth/logout`, {}, false, user.token);

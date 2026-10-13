@@ -141,12 +141,13 @@ describe.skipIf(!databaseUrl)('mock exams API', () => {
       questions: { questionId: string; questionVersion: number }[];
     };
     expect(repeated.questions).toEqual(draft.questions);
-    const attemptedEdit = await fetch(`${app.url}/exams/${draft.examId}`, {
+    const edited = await fetch(`${app.url}/exams/${draft.examId}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', authorization: bearer(teacher.token) },
-      body: JSON.stringify({ title: 'Alterado' }),
+      body: JSON.stringify({ schoolId, title: 'Alterado' }),
     });
-    expect(attemptedEdit.status).toBe(405);
+    expect(edited.status).toBe(200);
+    expect(await edited.json()).toMatchObject({ title: 'Alterado', status: 'DRAFT' });
 
     const publish = await postJson(
       `${app.url}/exams/${draft.examId}/publish`,
@@ -155,6 +156,24 @@ describe.skipIf(!databaseUrl)('mock exams API', () => {
       teacher.token,
     );
     expect(publish.status).toBe(200);
+    const audit = await prisma.auditEvent.findMany({
+      where: {
+        actorUserId: teacher.userId,
+        actorSchoolId: schoolId,
+        targetType: 'MockExam',
+        targetId: draft.examId,
+      },
+      select: { action: true },
+    });
+    expect(audit.map(({ action }) => action)).toEqual(
+      expect.arrayContaining(['exam.created', 'exam.updated', 'exam.published']),
+    );
+    const attemptedEditAfterPublish = await fetch(`${app.url}/exams/${draft.examId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', authorization: bearer(teacher.token) },
+      body: JSON.stringify({ schoolId, title: 'Não alterável' }),
+    });
+    expect(attemptedEditAfterPublish.status).toBe(409);
 
     const start = await postJson(
       `${app.url}/exams/${draft.examId}/start`,

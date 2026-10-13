@@ -1,19 +1,18 @@
 # Next Steps - MateMágico Champions
 
-**Last Updated**: 2026-10-11
+**Last Updated**: 2026-10-13
 
 ## Immediate
 
-1. Prompt 04.1 editorial import is implemented; preserve the `IMPORTED -> IN_REVIEW -> APPROVED -> PUBLISHED` gate and do not import unauthorized OBMEP content into a persistent database.
-2. **Prompt 06**: complete Attempts + AutoCorrect + Outbox + Ranking Base. Keep using frozen `(questionId, questionVersion)` references from published exams.
-3. Decide question-bank curation (global vs per-school) and obtain OBMEP content authorization (ADR-0011).
-4. Confirm CI and migrations on the intended test database; avoid using a developer database for destructive DB suites.
-5. Persistent rate-limit adapter, password reset, per-user school quota (see `TECH-DEBT.md` items 14-19).
+1. Run the GitHub Actions workflow against the release candidate and confirm every required gate, including dependency review and secret scanning, passes.
+2. Deploy the validated Compose stack to a dedicated real staging environment with URL-safe DB credentials, provision a dedicated smoke school, and execute `npm run smoke-test`.
+3. Create `v0.2.0-mvp` only after remote CI and real staging smoke evidence are recorded. Local validation is green; no tag has been created.
+4. Keep the `IMPORTED -> IN_REVIEW -> APPROVED -> PUBLISHED` editorial gate and immutable published-exam contract.
+5. After release, decide question-bank curation (global vs per-school), obtain OBMEP content authorization (ADR-0011), and plan shared permission-cache invalidation before multiple API replicas.
 
 ## Then
 
-- Attempts, automatic grading, simple ranking (see `docs/product/MVP-SCOPE.md`).
-- Outbox pattern, audit trail, metrics/tracing (non-blocking).
+- Distributed tracing/OpenTelemetry and outbox for Membership/User/School events remain open.
 - Formal approval of ADR-0001–0005 and 0009.
 
 ## Not in MVP

@@ -35,6 +35,24 @@ describe('request observability', () => {
     }
   });
 
+  it('exposes HTTP request counters and duration histograms in Prometheus format', async () => {
+    const app = await startApp(fakePrisma(async () => []).prisma);
+    try {
+      await fetch(`${app.url}/health`);
+      const response = await fetch(`${app.url}/metrics`);
+      const metrics = await response.text();
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/plain');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(metrics).toContain('# TYPE requests_total counter');
+      expect(metrics).toContain('requests_total{method="GET",route="/health",status="200"} 1');
+      expect(metrics).toContain('# TYPE request_duration_ms histogram');
+      expect(metrics).toContain('request_duration_ms_count{method="GET",route="/health"} 1');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('logs school-scoped failures with correlation metadata without logging request payloads', async () => {
     const warnings = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);

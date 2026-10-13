@@ -78,7 +78,7 @@ describe.skipIf(!databaseUrl)('PrismaMockExamRepository', () => {
 
     const draft = await repository.create(exam);
     expect(draft.questions[0]).toMatchObject({ questionId, questionVersion: 1, position: 1 });
-    expect(draft.questions[0]?.options[0]).not.toHaveProperty('isCorrect');
+    expect(draft.questions[0]?.options[0]).toHaveProperty('isCorrect');
 
     const published = await repository.publish(exam.publish(now));
     expect(published.status).toBe('PUBLISHED');

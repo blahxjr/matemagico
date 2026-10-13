@@ -6,6 +6,7 @@
 **Propriedade**: Arquitecture Team
 
 > **Estado atual (baseline, 2026-10-10)**: npm workspaces + Turborepo, Vitest, PostgreSQL/Prisma, API HTTP em `apps/api`. Auth, Membership, Users e Schools estão implementados (Prompt 02: portas reais e Argon2id; Prompt 03: Actor derivado da Session, autorização granular, Zod e OpenAPI 3.1). Prompt 04: `@matemagico/topics` e `@matemagico/questions`, banco versionado com versões publicadas imutáveis, importação JSON/CSV e ADR-0011. Prompt 05: `@matemagico/question-engine` e `@matemagico/mock-exams`; seleção determinística apenas de questões PUBLISHED/isCurrent, seleção sem repetição e falha por insuficiência; simulados guardam referências `(questionId, questionVersion)`, ficam imutáveis após publicar e só iniciam dentro da janela. `StartExam` não cria Attempt nem corrige respostas. A decisão de frontend vigente é o ADR-0005 (ver [ADR-INDEX](docs/architecture/ADRs/ADR-INDEX.md)). Menções a PNPM/Jest neste documento são histórico corrigido; escopo do MVP em [MVP-SCOPE](docs/product/MVP-SCOPE.md).
+> **Estado atual do MVP (2026-10-13)**: além da fundação descrita, Prompts 06-09 entregaram Attempts, correção, rankings, relatórios e jornadas de aluno/professor/escola. Prompt 10 está implementado; testes locais, build, lint, DB, E2E, arquitetura, formatação, OpenAPI e smoke Docker local passaram. A tag `v0.2.0-mvp` permanece pendente da execução do CI remoto e da validação em staging real. Detalhes operacionais em [operations](docs/engineering/operations.md).
 
 ---
 
@@ -20,6 +21,12 @@ O MateMágico Champions é uma plataforma SaaS educacional escalável para trein
 - Manutenibilidade através de módulos bem definidos
 - Documentação como código
 - Automação de processos
+
+## Hardening operacional (Prompt 10)
+
+`apps/api` mantem liveness (`/health`) separado de readiness (`/ready`), request/correlation IDs e metricas Prometheus (`/metrics`). A readiness confere o banco, migrations, estruturas de auditoria/rate limit e Composition Root. Mutacoes sensiveis registram `AuditEvent`; o endpoint de exportacao e auto-desativacao preserva historico academico.
+
+O limiter de login usa contadores atomicos no PostgreSQL com identificadores hashados. O cache de permissao atual e local a cada processo, com TTL e invalidacao nos fluxos de ativacao/concessao; deployments multi-replica precisam de invalidacao distribuida antes de depender dele para revogacoes imediatas. Logs JSON, métricas Prometheus e IDs de correlação oferecem observabilidade básica, sem spans OpenTelemetry. A stack Docker e o smoke flow passaram localmente; a configuração e o checklist para validação em staging real estão em [docs/engineering/operations.md](docs/engineering/operations.md).
 
 ---
 

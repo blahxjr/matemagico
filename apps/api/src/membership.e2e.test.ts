@@ -57,7 +57,18 @@ describe.skipIf(!databaseUrl)('memberships with Session-derived Actor', () => {
       admin.token,
     );
     expect(granted.status).toBe(201);
-    expect(await json(granted)).toEqual({ grantId: expect.any(String) });
+    const { grantId } = await json(granted);
+    expect(grantId).toEqual(expect.any(String));
+    const audit = await prisma.auditEvent.findMany({
+      where: { actorUserId: admin.userId, actorSchoolId: schoolId },
+      select: { action: true, targetId: true },
+    });
+    expect(audit).toEqual(
+      expect.arrayContaining([
+        { action: 'membership.activated', targetId: membershipId },
+        { action: 'membership.role.granted', targetId: grantId },
+      ]),
+    );
   });
 
   it('401 without a Session on every membership route', async () => {

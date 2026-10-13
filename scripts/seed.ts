@@ -14,10 +14,12 @@ const PERMISSIONS = {
     'question:publish',
     'exam:create',
     'exam:publish',
+    'report:read',
   ],
   SCHOOL_ADMIN: [
     'membership:create',
     'membership:activate',
+    'membership:read',
     'role:grant',
     'school:read',
     'school:update',
@@ -26,6 +28,7 @@ const PERMISSIONS = {
     'question:publish',
     'exam:create',
     'exam:publish',
+    'report:read',
   ],
 } as const;
 
@@ -153,20 +156,21 @@ async function seedQuestionBank(): Promise<void> {
     { status: 'IMPORTED' },
     { limit: 1000, offset: 0 },
   );
-  for (const question of imported.items) {
+  const seedQuestions = imported.items.filter((item) => item.content.sourceName === 'MOCK');
+  for (const question of seedQuestions) {
+    const reviewed = await services.startReview.execute({ questionId: question.id });
     await services.updateQuestion.execute({
-      questionId: question.id,
+      questionId: reviewed.questionId,
       ...question.content,
       sourceType: 'INTERNAL',
       authorName: 'MateMágico',
       explanation: question.content.explanation ?? 'Resolução disponível no MateMágico.',
     });
-    const reviewed = await services.startReview.execute({ questionId: question.id });
     await services.approveQuestion.execute({ questionId: reviewed.questionId });
     await services.publishQuestion.execute({ questionId: reviewed.questionId });
   }
   console.log(
-    `Question bank seeded: created ${report.created}, skipped ${report.skipped}, published ${imported.items.length}.`,
+    `Question bank seeded: created ${report.created}, skipped ${report.skipped}, published ${seedQuestions.length}.`,
   );
 }
 

@@ -13,6 +13,12 @@ export interface AttemptRepository {
     schoolId: string;
     userId: string;
   }): Promise<AttemptSnapshotState | null>;
+  listByUser(input: {
+    schoolId: string;
+    userId: string;
+    examId?: string;
+  }): Promise<readonly AttemptSnapshotState[]>;
+  listSubmittedBySchool(schoolId: string): Promise<readonly AttemptSnapshotState[]>;
   saveAnswer(attempt: Attempt): Promise<AttemptSnapshotState>;
   finish(attempt: Attempt): Promise<AttemptSnapshotState>;
 }

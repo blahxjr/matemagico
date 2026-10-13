@@ -5,11 +5,11 @@ MateMágico Champions é uma plataforma SaaS educacional para treino de estudant
 ## Status
 
 ```text
-MVP READY
-Prisma Adapters Ready
+P10 IMPLEMENTADO
+RELEASE v0.2.0-mvp PENDENTE
 ```
 
-Baseline estabilizado (Prompt 01): CI com PostgreSQL, seed e ambiente local reproduzível. Escopo em [docs/product/MVP-SCOPE.md](docs/product/MVP-SCOPE.md); ADRs em [ADR-INDEX](docs/architecture/ADRs/ADR-INDEX.md). Release: `v0.1.0-mvp-ready`. Detalhes em [docs/releases/MVP-READY.md](docs/releases/MVP-READY.md). Dívidas conhecidas em [TECH-DEBT.md](TECH-DEBT.md).
+O hardening do Prompt 10 foi implementado e os gates locais de testes, build, lint, arquitetura, formatacao, DB e Playwright passaram. A stack Docker de staging e o smoke flow foram validados localmente. A release existente e `v0.1.0-mvp-ready`; nao criar a tag `v0.2.0-mvp` ate obter evidencia do CI remoto e de um staging real. Escopo em [docs/product/MVP-SCOPE.md](docs/product/MVP-SCOPE.md), ADRs em [ADR-INDEX](docs/architecture/ADRs/ADR-INDEX.md), operacao em [docs/engineering/operations.md](docs/engineering/operations.md) e dividas em [TECH-DEBT.md](TECH-DEBT.md).
 
 ## Arquitetura
 
@@ -33,7 +33,7 @@ Monorepo (npm workspaces + Turborepo) com fronteiras de módulo verificadas por 
 
 **Prompt 04 concluído**: módulos `@matemagico/topics` e `@matemagico/questions` (banco de questões OBMEP, versionado). Rotas (todas exigem Session): `GET/POST /topics`, `GET/PATCH /topics/:id`, `GET/POST /questions`, `GET /questions/:id`, `POST /questions/:id/{publish,archive,version}`. Escrita exige `question:create|update|publish` no `schoolId` informado (somente `TEACHER` e `SCHOOL_ADMIN`; `schoolId` é contexto, nunca identidade). Leitores veem só questões `PUBLISHED` e tópicos `ACTIVE`, sem `isCorrect`; autores (com `schoolId` e `question:create`) veem rascunhos, versões e gabarito. Filtros: `level`, `topicId`, `status`, `sourceYear` (+ `limit`/`offset`). Questões publicadas são imutáveis: qualquer alteração gera a versão N+1 em `DRAFT`; publicar a nova versão arquiva a anterior. Importação JSON/CSV (`npm run questions:import`, formato em [docs/questions/IMPORT-FORMAT.md](docs/questions/IMPORT-FORMAT.md)); `npm run seed` publica 100 questões MOCK (conteúdo gerado, sem direitos de terceiros: [ADR-0011](docs/architecture/ADRs/ADR-0011-question-content-licensing-strategy.md)).
 
-**Prompt 05 concluído**: `@matemagico/question-engine` seleciona apenas questões PUBLISHED e `isCurrent`, sem repetição e de forma determinística por seed; insuficiência falha explicitamente. `@matemagico/mock-exams` cria simulados DRAFT com seleção ordenada e referências persistidas `(questionId, questionVersion)`. Publicação congela o conteúdo referenciado; o início retorna questões sem gabarito e não cria Attempt. Rotas: `GET/POST /exams`, `GET /exams/:id`, `POST /exams/:id/{publish,archive,start}`. Criação exige `exam:create`; publicação/arquivamento, `exam:publish`; alunos usam `school:read` e só listam/iniciam simulados publicados dentro da janela. Próximo: Prompt 06 (Attempts, AutoCorrect, Outbox e Ranking Base).
+**Prompt 05 concluído**: `@matemagico/question-engine` seleciona apenas questões PUBLISHED e `isCurrent`, sem repetição e de forma determinística por seed; insuficiência falha explicitamente. `@matemagico/mock-exams` cria simulados DRAFT com seleção ordenada e referências persistidas `(questionId, questionVersion)`. Publicação congela o conteúdo referenciado; o início retorna questões sem gabarito e não cria Attempt. Rotas: `GET/POST /exams`, `GET /exams/:id`, `POST /exams/:id/{publish,archive,start}`. Criação exige `exam:create`; publicação/arquivamento, `exam:publish`; alunos usam `school:read` e só listam/iniciam simulados publicados dentro da janela. Attempts, rankings e jornada escolar foram entregues nos Prompts 06-09.
 
 Princípios: _fail closed_ (dependência indisponível nunca autoriza), _deny by default_ e Permission nunca concedida diretamente.
 
@@ -78,20 +78,17 @@ packages/testing             Testes end-to-end entre módulos
 docs/architecture            ADRs, contratos, decisões e planos de implementação
 ```
 
-Outros diretórios: `apps/api` (API HTTP com Auth, Membership, banco de questões, simulados e `/health`), `apps/web` (scaffold de frontend, fora do baseline), `packages/shared-types`, `packages/logger`, `packages/events`.
+Outros diretórios: `apps/api` (API HTTP com Auth, Membership, banco de questões, simulados, rankings, `/health`, `/ready` e `/metrics`), `apps/web` (jornadas de aluno e equipe escolar), `packages/shared-types`, `packages/logger`, `packages/events` e `packages/modules/audit`.
 
-## Testes
+## Hardening (Prompt 10)
 
-Sem banco de dados (24 testes de adapters Prisma pulados; o CI usa PostgreSQL e os executa):
+Implementados: eventos de auditoria em Auth, Membership, Exams, Attempts e privacidade; limiter de login persistido no PostgreSQL; cache de autorização em memória; logs JSON com contexto de request; métricas Prometheus; request IDs; headers de segurança; exportação/desativação do próprio usuário; `/health` e `/ready`; CI com gates de qualidade; contratos OpenAPI; Compose de staging e smoke test. Validação local passou em lint, build, unitários, DB, Playwright, arquitetura, formatação e geração OpenAPI; o smoke flow Docker local também passou. A release continua pendente de execução do workflow remoto e validação em staging real. Consulte [docs/engineering/operations.md](docs/engineering/operations.md).
 
-| Pacote                                      | Testes                     |
-| ------------------------------------------- | -------------------------- |
-| `@matemagico/auth`                          | 60 (5 dependem de banco)   |
-| `@matemagico/membership`                    | 143 (19 dependem de banco) |
-| `@matemagico/testing`                       | 19                         |
-| `@matemagico/logger`, `shared-types`, `web` | 1 cada                     |
+Para executar todos os gates: `npm run lint`, `npm run build`, `npm test`, `npm run test:db`, `npm run test:e2e`, `npm run test:architecture`, `npm run format:check`, `npm run openapi --workspace @matemagico/api` e `npm run smoke-test` (com as variáveis descritas na documentação operacional).
 
-Total: **225 testes passam** (24 adicionais são pulados sem banco). Com `TEST_DATABASE_URL` apontando para um PostgreSQL descartável e migrado, os adapters Prisma também são exercitados: Auth 65 e Membership 162.
+## Testes e evidências locais
+
+Última validação local (2026-10-13): `npm test` passou com 456 testes e 88 testes DB-gated pulados; `npm run test:db` passou com 102; Playwright passou 6/6. Lint e build passaram nos 21 workspaces, architecture check passou (739 módulos/1.078 dependências), format check passou, Prisma validou e a geração OpenAPI foi idempotente. O smoke flow também passou na stack Docker local. CI remoto e staging real ainda precisam ser validados antes de criar a tag `v0.2.0-mvp`.
 
 ## Como executar
 

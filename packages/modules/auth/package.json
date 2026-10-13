@@ -8,7 +8,7 @@
     "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:db": "vitest run src/infrastructure/persistence/prisma/auth-prisma-adapters.db.test.ts"
+    "test:db": "vitest run src/infrastructure/persistence/prisma/auth-prisma-adapters.db.test.ts src/infrastructure/persistence/prisma-login-attempt-limiter.db.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",

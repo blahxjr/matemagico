@@ -115,6 +115,35 @@ export class PublishMockExam {
   }
 }
 
+export class UpdateMockExam {
+  constructor(private readonly deps: { exams: MockExamRepository; clock: Clock }) {}
+
+  async execute(input: {
+    examId: string;
+    schoolId: string;
+    title?: string;
+    description?: string | null;
+    durationMinutes?: number;
+    availableFrom?: Date | null;
+    availableUntil?: Date | null;
+  }): Promise<MockExamView> {
+    const existing = await this.deps.exams.findById(input.examId, input.schoolId);
+    if (!existing) throw new MockExamsError('EXM-002');
+    const exam = MockExam.restore({
+      ...existing,
+      questions: existing.questions.map(({ questionId, questionVersion, position }) => ({
+        questionId,
+        questionVersion,
+        position,
+      })),
+    });
+    const { examId, schoolId, ...changes } = input;
+    void examId;
+    void schoolId;
+    return this.deps.exams.updateDraft(exam.updateDetails(changes, this.deps.clock.now()));
+  }
+}
+
 export class ArchiveMockExam {
   constructor(private readonly deps: { exams: MockExamRepository; clock: Clock }) {}
 
@@ -178,7 +207,7 @@ export class StartExam {
     return {
       examId: exam.examId,
       title: exam.title,
-      questions: exam.questions.map((question) => ({
+      questions: exam.questions.map(({ explanation: _explanation, ...question }) => ({
         ...question,
         options: question.options.map(({ label, content }) => ({ label, content })),
       })),

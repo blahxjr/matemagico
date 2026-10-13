@@ -35,6 +35,7 @@ export type { PasswordVerifier } from './application/ports/password-verifier';
 export type { Clock, SessionIdGenerator } from './application/ports/runtime';
 export type { UserIdentity, UserRepository } from './application/ports/user.repository';
 export { InMemoryLoginAttemptLimiter } from './infrastructure/rate-limit/in-memory-login-attempt-limiter';
+export { PrismaLoginAttemptLimiter } from './infrastructure/rate-limit/prisma-login-attempt-limiter';
 export { systemClock, uuidSessionIdGenerator } from './infrastructure/runtime/system-runtime';
 export { AuthAccount, AUTH_PROVIDER } from './domain/entities/auth-account';
 export { PasswordCredential } from './domain/entities/password-credential';

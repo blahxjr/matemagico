@@ -96,3 +96,4 @@ export {
   SCHOOL_ADMIN_ROLE_CODE,
 } from './application/authorization/grant-based-actor-authorizer';
 export type { GrantBasedActorAuthorizerDependencies } from './application/authorization/grant-based-actor-authorizer';
+export { InMemoryPermissionCache } from './application/authorization/cached-actor-authorizer';

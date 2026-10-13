@@ -7,6 +7,9 @@ const REQUIRED: Array<[string, string]> = [
   ['/auth/login', 'post'],
   ['/auth/logout', 'post'],
   ['/auth/me', 'get'],
+  ['/me/export', 'get'],
+  ['/me/deactivate', 'post'],
+  ['/metrics', 'get'],
   ['/memberships', 'post'],
   ['/memberships/{membershipId}/activate', 'post'],
   ['/memberships/{membershipId}/grants', 'post'],
@@ -53,6 +56,18 @@ describe('OpenAPI', () => {
 });
 
 describe('transport security (no database needed)', () => {
+  it('sets the baseline browser security headers', async () => {
+    const app = await startApp(fakePrisma(async () => []).prisma);
+    try {
+      const res = await fetch(`${app.url}/health`);
+      expect(res.headers.get('x-frame-options')).toBe('DENY');
+      expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(res.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('CORS reflects only configured origins and answers preflight', async () => {
     const prisma = unreachablePrisma();
     const app = await startApp(prisma, undefined, {

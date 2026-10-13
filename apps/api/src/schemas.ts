@@ -48,6 +48,7 @@ export const meResponse = strict({
     }),
   ),
 });
+export const deactivateMeResponse = strict({ result: z.literal('DEACTIVATED') });
 export const membershipCreatedResponse = strict({
   membershipId: z.string(),
   state: z.literal('PENDING'),
@@ -234,6 +235,57 @@ export const mockExamListQuery = strict({
   includeDrafts: z.enum(['true', 'false']).optional(),
 });
 export const mockExamGetQuery = strict({ schoolId: idSchema });
+export const updateMockExamBody = strict({
+  schoolId: idSchema,
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().max(2000).nullable().optional(),
+  durationMinutes: z.number().int().positive().optional(),
+  availableFrom: dateTime.nullable().optional(),
+  availableUntil: dateTime.nullable().optional(),
+});
+
+export const schoolScopedQuery = strict({ schoolId: idSchema });
+export const membersResponse = strict({
+  items: z.array(
+    strict({
+      membershipId: z.string(),
+      userId: z.string(),
+      name: z.string(),
+      email: z.string(),
+      state: z.string(),
+      roles: z.array(z.string()),
+    }),
+  ),
+});
+const rankingItem = strict({
+  position: z.number().int().positive(),
+  studentId: z.string(),
+  score: z.number(),
+  correctAnswers: z.number().int(),
+  timeSpentSeconds: z.number().int(),
+  completedAt: z.string(),
+  attempts: z.number().int(),
+});
+export const rankingResponse = strict({ items: z.array(rankingItem) });
+export const performanceResponse = strict({
+  students: z.array(
+    strict({
+      studentId: z.string(),
+      attempts: z.number().int(),
+      averageScore: z.number(),
+      lastScore: z.number(),
+      lastAttemptAt: z.string().nullable(),
+    }),
+  ),
+  topics: z.array(
+    strict({
+      topicId: z.string(),
+      correctAnswers: z.number().int(),
+      wrongAnswers: z.number().int(),
+      percentage: z.number(),
+    }),
+  ),
+});
 export const mockExamResponse = strict({
   examId: z.string(),
   title: z.string(),
@@ -252,6 +304,9 @@ export const mockExamResponse = strict({
       title: z.string(),
       statement: z.string(),
       level: z.enum(QUESTION_LEVELS),
+      difficulty: z.string().nullable().optional(),
+      gradeLevel: z.string().nullable().optional(),
+      imageUrl: z.string().nullable().optional(),
       options: z.array(strict({ label: z.string(), content: z.string() })),
     }),
   ),
@@ -267,7 +322,7 @@ export const startExamResponse = strict({
 });
 
 // ---- Attempts -----------------------------------------------------------------------------
-export const startAttemptBody = strict({ schoolId: idSchema });
+export const startAttemptBody = strict({ schoolId: idSchema, examId: idSchema.optional() });
 export const submitAnswerBody = strict({
   schoolId: idSchema,
   questionId: idSchema,
@@ -281,6 +336,13 @@ const attemptQuestionResponse = strict({
   topicId: z.string(),
   title: z.string(),
   statement: z.string(),
+  level: z.string().nullable().optional(),
+  difficulty: z.string().nullable().optional(),
+  gradeLevel: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  /** Only present once the attempt is finished. */
+  correctOption: z.string().nullable().optional(),
+  explanation: z.string().nullable().optional(),
   options: z.array(strict({ label: z.string(), content: z.string() })),
 });
 export const attemptResponse = strict({
@@ -305,15 +367,59 @@ export const attemptResponse = strict({
   result: strict({
     score: z.number(),
     correctAnswers: z.number().int(),
+    wrongAnswers: z.number().int(),
     totalQuestions: z.number().int(),
     percentage: z.number(),
     topicResults: z.record(
       z.string(),
       strict({
         correctAnswers: z.number().int(),
+        wrongAnswers: z.number().int(),
+        totalQuestions: z.number().int(),
+        percentage: z.number(),
+      }),
+    ),
+    difficultyResults: z.record(
+      z.string(),
+      strict({
+        correctAnswers: z.number().int(),
+        wrongAnswers: z.number().int(),
+        totalQuestions: z.number().int(),
+        percentage: z.number(),
+      }),
+    ),
+    gradeLevelResults: z.record(
+      z.string(),
+      strict({
+        correctAnswers: z.number().int(),
+        wrongAnswers: z.number().int(),
         totalQuestions: z.number().int(),
         percentage: z.number(),
       }),
     ),
   }).nullable(),
+});
+export const attemptGetQuery = strict({
+  schoolId: idSchema,
+});
+export const attemptHistoryQuery = strict({
+  schoolId: idSchema,
+  examId: idSchema.optional(),
+});
+export const attemptHistoryResponse = strict({
+  items: z.array(attemptResponse),
+});
+export const meExportResponse = strict({
+  profile: meResponse,
+  memberships: z.array(
+    strict({
+      membershipId: z.string(),
+      schoolId: z.string(),
+      state: z.enum(['PENDING', 'ACTIVE', 'REVOKED']),
+      createdAt: z.string(),
+      activatedAt: z.string().nullable(),
+      revokedAt: z.string().nullable(),
+    }),
+  ),
+  attempts: z.array(attemptResponse),
 });

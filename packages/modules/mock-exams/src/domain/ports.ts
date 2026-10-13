@@ -6,6 +6,11 @@ export interface ExamQuestionView extends MockExamQuestionReference {
   readonly title: string;
   readonly statement: string;
   readonly level: QuestionLevel;
+  readonly difficulty?: string | null;
+  readonly gradeLevel?: string | null;
+  readonly imageUrl?: string | null;
+  /** Internal only: revealed to the student exclusively after the attempt is finished. */
+  readonly explanation?: string | null;
   /** Internal server-side view. HTTP services must remove isCorrect before returning it. */
   readonly options: readonly {
     readonly label: string;
@@ -39,6 +44,8 @@ export interface MockExamRepository {
     availableAt?: Date;
   }): Promise<MockExamView[]>;
   publish(exam: MockExam): Promise<MockExamView>;
+  /** Persists metadata of a DRAFT; EXM-003 if it is no longer a DRAFT. */
+  updateDraft(exam: MockExam): Promise<MockExamView>;
   archive(exam: MockExam): Promise<MockExamView>;
 }
 

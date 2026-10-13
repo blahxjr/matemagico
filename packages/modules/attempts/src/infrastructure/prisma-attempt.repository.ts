@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { assertEventContract } from '@matemagico/events';
+import type { AttemptCompletedEvent } from '@matemagico/events';
 import { Attempt, AttemptsError, type AttemptSnapshotState } from '../domain/attempt';
 import type { AttemptRepository } from '../domain/ports';
 
@@ -30,11 +33,18 @@ function toState(row: Row): AttemptSnapshotState {
           ...result,
           score: asNumber(row.score) ?? 0,
           correctAnswers: row.correctAnswers ?? 0,
+          wrongAnswers: result.wrongAnswers ?? row.totalQuestions - (row.correctAnswers ?? 0),
           totalQuestions: row.totalQuestions,
           percentage: asNumber(row.percentage) ?? 0,
-          topicResults: (readRecord(row.topicResults) ?? {}) as NonNullable<
+          topicResults: (readRecord(row.topicResults) ?? result.topicResults ?? {}) as NonNullable<
             AttemptSnapshotState['result']
           >['topicResults'],
+          difficultyResults: (result.difficultyResults ?? {}) as NonNullable<
+            AttemptSnapshotState['result']
+          >['difficultyResults'],
+          gradeLevelResults: (result.gradeLevelResults ?? {}) as NonNullable<
+            AttemptSnapshotState['result']
+          >['gradeLevelResults'],
         }
       : null,
   };
@@ -91,6 +101,32 @@ export class PrismaAttemptRepository implements AttemptRepository {
     return row ? toState(row) : null;
   }
 
+  async listByUser(input: {
+    schoolId: string;
+    userId: string;
+    examId?: string;
+  }): Promise<readonly AttemptSnapshotState[]> {
+    const rows = await this.prisma.attempt.findMany({
+      where: {
+        schoolId: input.schoolId,
+        userId: input.userId,
+        ...(input.examId ? { examId: input.examId } : {}),
+      },
+      include: { answers: true },
+      orderBy: { startedAt: 'desc' },
+    });
+    return rows.map(toState);
+  }
+
+  async listSubmittedBySchool(schoolId: string): Promise<readonly AttemptSnapshotState[]> {
+    const rows = await this.prisma.attempt.findMany({
+      where: { schoolId, status: 'SUBMITTED' },
+      include: { answers: true },
+      orderBy: { submittedAt: 'asc' },
+    });
+    return rows.map(toState);
+  }
+
   async saveAnswer(attempt: Attempt): Promise<AttemptSnapshotState> {
     const answer = attempt.state.answers.at(-1);
     if (!answer) throw new AttemptsError('ATT-001');
@@ -142,7 +178,33 @@ export class PrismaAttemptRepository implements AttemptRepository {
 
   async finish(attempt: Attempt): Promise<AttemptSnapshotState> {
     const result = attempt.state.result;
-    if (!result) throw new AttemptsError('ATT-001');
+    const completedAt = attempt.state.submittedAt;
+    if (!result || !completedAt) throw new AttemptsError('ATT-001');
+    const completedEvent: AttemptCompletedEvent = {
+      eventId: randomUUID(),
+      eventName: 'AttemptCompleted',
+      aggregateId: attempt.state.attemptId,
+      aggregateType: 'Attempt',
+      schemaVersion: 1,
+      schoolId: attempt.state.schoolId,
+      occurredAt: completedAt.toISOString(),
+      correlationId: attempt.state.attemptId,
+      causationId: attempt.state.attemptId,
+      payload: {
+        attemptId: attempt.state.attemptId,
+        userId: attempt.state.userId,
+        schoolId: attempt.state.schoolId,
+        examId: attempt.state.snapshot.examId,
+        score: result.score,
+        percentage: result.percentage,
+        correctAnswers: result.correctAnswers,
+        timeSpentSeconds: Math.max(
+          0,
+          Math.round((completedAt.getTime() - attempt.state.startedAt.getTime()) / 1000),
+        ),
+      },
+    };
+    assertEventContract(completedEvent);
     try {
       const updated = await this.prisma.attempt.updateMany({
         where: {
@@ -153,28 +215,13 @@ export class PrismaAttemptRepository implements AttemptRepository {
         },
         data: {
           status: attempt.state.status,
-          submittedAt: attempt.state.submittedAt,
+          submittedAt: completedAt,
           score: result.score,
           correctAnswers: result.correctAnswers,
           percentage: result.percentage,
           topicResults: result.topicResults as unknown as Prisma.InputJsonValue,
           result: result as unknown as Prisma.InputJsonValue,
-          completedEvent: {
-            eventName: 'AttemptCompleted',
-            aggregateId: attempt.state.attemptId,
-            aggregateType: 'Attempt',
-            schemaVersion: 1,
-            schoolId: attempt.state.schoolId,
-            occurredAt: attempt.state.submittedAt?.toISOString(),
-            payload: {
-              attemptId: attempt.state.attemptId,
-              userId: attempt.state.userId,
-              schoolId: attempt.state.schoolId,
-              examId: attempt.state.snapshot.examId,
-              score: result.score,
-              percentage: result.percentage,
-            },
-          } as unknown as Prisma.InputJsonValue,
+          completedEvent: completedEvent as unknown as Prisma.InputJsonValue,
         },
       });
       const row = await this.prisma.attempt.findFirst({

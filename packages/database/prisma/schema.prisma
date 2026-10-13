@@ -50,6 +50,31 @@ model Session {
   @@index([userId, revokedAt, absoluteExpiresAt, idleExpiresAt])
 }
 
+model AuditEvent {
+  auditId       String   @id
+  occurredAt    DateTime
+  actorUserId   String?
+  actorSchoolId String?
+  action        String
+  targetType    String
+  targetId      String?
+  reason        String?
+  metadata      Json
+
+  @@index([actorUserId, occurredAt])
+  @@index([actorSchoolId, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+}
+
+model LoginAttemptCounter {
+  key              String
+  windowStartedAt  DateTime
+  count            Int
+
+  @@id([key, windowStartedAt])
+  @@index([windowStartedAt])
+}
+
 enum MembershipState {
   PENDING
   ACTIVE
@@ -363,4 +388,22 @@ model AttemptAnswer {
   attempt         Attempt @relation(fields: [attemptId], references: [attemptId], onDelete: Cascade)
 
   @@id([attemptId, questionId])
+}
+
+/// Read model projected from AttemptCompleted; one row per completed attempt.
+model RankingEntry {
+  id               String   @id
+  schoolId         String
+  examId           String
+  studentId        String
+  attemptId        String   @unique
+  score            Decimal  @db.Decimal(5, 2)
+  correctAnswers   Int
+  timeSpentSeconds Int
+  completedAt      DateTime
+  createdAt        DateTime
+  updatedAt        DateTime
+
+  @@index([schoolId, studentId])
+  @@index([schoolId, examId])
 }

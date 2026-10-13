@@ -43,6 +43,8 @@ export type AttemptCompletedEvent = EventEnvelope & {
     examId: string;
     score: number;
     percentage: number;
+    correctAnswers?: number;
+    timeSpentSeconds?: number;
   };
 };
 
@@ -183,6 +185,15 @@ export function assertEventContract(value: unknown): asserts value is DomainEven
       !Number.isFinite(value.payload.percentage)
     ) {
       throw new EventContractError('AttemptCompleted score and percentage must be finite numbers');
+    }
+    for (const field of ['correctAnswers', 'timeSpentSeconds'] as const) {
+      const metric = value.payload[field];
+      if (
+        metric !== undefined &&
+        (typeof metric !== 'number' || !Number.isInteger(metric) || metric < 0)
+      ) {
+        throw new EventContractError(`AttemptCompleted ${field} must be a non-negative integer`);
+      }
     }
   } else {
     throw new EventContractError(`Unsupported eventName: ${eventName}`);

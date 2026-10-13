@@ -27,6 +27,10 @@ export function addLogContext(context: LogContext): void {
   if (activeContext) Object.assign(activeContext, context);
 }
 
+export function getLogContext(): Readonly<LogContext> {
+  return { ...(contextStorage.getStore() ?? {}) };
+}
+
 export function createLogger(baseContext: LogContext = {}) {
   return {
     log(level: LogLevel, message: string, context: LogContext = {}): LogEntry {

@@ -24,6 +24,10 @@ function toView(row: ExamRow): MockExamView {
       title: item.question.title,
       statement: item.question.statement,
       level: item.question.level,
+      difficulty: item.question.difficulty,
+      gradeLevel: item.question.gradeLevel,
+      imageUrl: item.question.imageUrl,
+      explanation: item.question.explanation,
       options: item.question.options.map(({ label, content, isCorrect }) => ({
         label,
         content,
@@ -128,6 +132,24 @@ export class PrismaMockExamRepository implements MockExamRepository {
 
   async publish(exam: MockExam): Promise<MockExamView> {
     return this.updateStatus(exam, 'DRAFT');
+  }
+
+  async updateDraft(exam: MockExam): Promise<MockExamView> {
+    const result = await this.prisma.mockExam.updateMany({
+      where: { examId: exam.examId, schoolId: exam.schoolId, status: 'DRAFT' },
+      data: {
+        title: exam.title,
+        description: exam.description,
+        durationMinutes: exam.durationMinutes,
+        availableFrom: exam.availableFrom,
+        availableUntil: exam.availableUntil,
+        updatedAt: exam.updatedAt,
+      },
+    });
+    if (result.count !== 1) throw new MockExamsError('EXM-003');
+    const saved = await this.findById(exam.examId, exam.schoolId);
+    if (!saved) throw new MockExamsError('EXM-002');
+    return saved;
   }
 
   async archive(exam: MockExam): Promise<MockExamView> {

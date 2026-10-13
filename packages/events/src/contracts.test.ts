@@ -53,6 +53,8 @@ const attemptCompleted: DomainEvent = {
     examId: 'exam-1',
     score: 80,
     percentage: 80,
+    correctAnswers: 8,
+    timeSpentSeconds: 300,
   },
 };
 
@@ -88,6 +90,18 @@ describe('Membership event contracts', () => {
       assertEventContract({ ...membershipCreated, eventName: 'UnregisteredEvent' }),
     ).toThrow('Unsupported eventName');
   });
+
+  it.each(['correctAnswers', 'timeSpentSeconds'] as const)(
+    'rejects an invalid AttemptCompleted %s metric',
+    (field) => {
+      expect(() =>
+        assertEventContract({
+          ...attemptCompleted,
+          payload: { ...attemptCompleted.payload, [field]: -1 },
+        }),
+      ).toThrow(`${field} must be a non-negative integer`);
+    },
+  );
 
   it('rejects values that cannot be serialized as JSON', () => {
     const cyclicPayload: Record<string, unknown> = {

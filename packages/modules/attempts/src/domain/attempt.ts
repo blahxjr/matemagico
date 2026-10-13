@@ -1,6 +1,30 @@
 export const ATTEMPT_STATUSES = ['IN_PROGRESS', 'SUBMITTED', 'EXPIRED'] as const;
 export type AttemptStatus = (typeof ATTEMPT_STATUSES)[number];
 
+export interface OutboxEvent<T = unknown> {
+  readonly eventId: string;
+  readonly eventName: string;
+  readonly aggregateId: string;
+  readonly aggregateType: string;
+  readonly schemaVersion: number;
+  readonly schoolId: string;
+  readonly occurredAt: string;
+  readonly correlationId: string;
+  readonly causationId: string;
+  readonly payload: T;
+}
+
+export type AttemptCompletedPayload = {
+  readonly attemptId: string;
+  readonly examId: string;
+  readonly userId: string;
+  readonly schoolId: string;
+  readonly score: number;
+  readonly percentage?: number;
+  readonly correctAnswers: number;
+  readonly timeSpentSeconds: number;
+};
+
 export interface AttemptQuestionSnapshot {
   readonly questionId: string;
   readonly questionVersion: number;
@@ -8,6 +32,11 @@ export interface AttemptQuestionSnapshot {
   readonly topicId: string;
   readonly title: string;
   readonly statement: string;
+  readonly level?: string | null;
+  readonly difficulty?: string | null;
+  readonly gradeLevel?: string | null;
+  readonly imageUrl?: string | null;
+  readonly explanation?: string | null;
   readonly options: readonly {
     readonly label: string;
     readonly content: string;
@@ -30,21 +59,112 @@ export interface AttemptAnswer {
   readonly answeredAt: Date;
 }
 
+export interface StatBreakdown {
+  readonly correctAnswers: number;
+  readonly wrongAnswers: number;
+  readonly totalQuestions: number;
+  readonly percentage: number;
+}
+
 export interface AttemptResult {
   readonly score: number;
   readonly correctAnswers: number;
+  readonly wrongAnswers: number;
   readonly totalQuestions: number;
   readonly percentage: number;
-  readonly topicResults: Readonly<
-    Record<
+  readonly topicResults: Readonly<Record<string, StatBreakdown>>;
+  readonly difficultyResults: Readonly<Record<string, StatBreakdown>>;
+  readonly gradeLevelResults: Readonly<Record<string, StatBreakdown>>;
+}
+
+export class AutoCorrect {
+  static calculate(
+    questions: readonly AttemptQuestionSnapshot[],
+    answers: readonly AttemptAnswer[],
+  ): AttemptResult {
+    const byTopic: Record<
       string,
-      {
-        readonly correctAnswers: number;
-        readonly totalQuestions: number;
-        readonly percentage: number;
-      }
-    >
-  >;
+      { correctAnswers: number; wrongAnswers: number; totalQuestions: number; percentage: number }
+    > = {};
+    const byDifficulty: Record<
+      string,
+      { correctAnswers: number; wrongAnswers: number; totalQuestions: number; percentage: number }
+    > = {};
+    const byGradeLevel: Record<
+      string,
+      { correctAnswers: number; wrongAnswers: number; totalQuestions: number; percentage: number }
+    > = {};
+
+    let correctAnswers = 0;
+
+    for (const question of questions) {
+      const answer = answers.find((item) => item.questionId === question.questionId);
+      const isCorrect = Boolean(answer?.isCorrect);
+
+      const topicKey = question.topicId;
+      const topic = byTopic[topicKey] ?? {
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        totalQuestions: 0,
+        percentage: 0,
+      };
+      topic.totalQuestions += 1;
+      if (isCorrect) topic.correctAnswers += 1;
+      else topic.wrongAnswers += 1;
+      byTopic[topicKey] = topic;
+
+      const diffKey = question.difficulty ?? 'MEDIUM';
+      const diff = byDifficulty[diffKey] ?? {
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        totalQuestions: 0,
+        percentage: 0,
+      };
+      diff.totalQuestions += 1;
+      if (isCorrect) diff.correctAnswers += 1;
+      else diff.wrongAnswers += 1;
+      byDifficulty[diffKey] = diff;
+
+      const gradeKey = question.gradeLevel ?? question.level ?? 'UNKNOWN';
+      const grade = byGradeLevel[gradeKey] ?? {
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        totalQuestions: 0,
+        percentage: 0,
+      };
+      grade.totalQuestions += 1;
+      if (isCorrect) grade.correctAnswers += 1;
+      else grade.wrongAnswers += 1;
+      byGradeLevel[gradeKey] = grade;
+
+      if (isCorrect) correctAnswers += 1;
+    }
+
+    const calcPercentage = (correct: number, total: number) =>
+      total > 0 ? Number(((correct / total) * 100).toFixed(2)) : 0;
+
+    for (const item of Object.values(byTopic))
+      item.percentage = calcPercentage(item.correctAnswers, item.totalQuestions);
+    for (const item of Object.values(byDifficulty))
+      item.percentage = calcPercentage(item.correctAnswers, item.totalQuestions);
+    for (const item of Object.values(byGradeLevel))
+      item.percentage = calcPercentage(item.correctAnswers, item.totalQuestions);
+
+    const totalQuestions = questions.length;
+    const wrongAnswers = totalQuestions - correctAnswers;
+    const percentage = calcPercentage(correctAnswers, totalQuestions);
+
+    return {
+      score: percentage,
+      correctAnswers,
+      wrongAnswers,
+      totalQuestions,
+      percentage,
+      topicResults: byTopic,
+      difficultyResults: byDifficulty,
+      gradeLevelResults: byGradeLevel,
+    };
+  }
 }
 
 export interface AttemptSnapshotState {
@@ -124,40 +244,12 @@ export class Attempt {
     if (this.state.status === status) return this;
     if (this.state.status !== 'IN_PROGRESS') throw new AttemptsError('ATT-003');
     if (status === 'SUBMITTED' && now >= this.state.expiresAt) return this.finish(now, 'EXPIRED');
-    const byTopic: Record<
-      string,
-      { correctAnswers: number; totalQuestions: number; percentage: number }
-    > = {};
-    let correctAnswers = 0;
-    for (const question of this.state.snapshot.questions) {
-      const answer = this.state.answers.find((item) => item.questionId === question.questionId);
-      const topic = byTopic[question.topicId] ?? {
-        correctAnswers: 0,
-        totalQuestions: 0,
-        percentage: 0,
-      };
-      topic.totalQuestions += 1;
-      if (answer?.isCorrect) {
-        correctAnswers += 1;
-        topic.correctAnswers += 1;
-      }
-      byTopic[question.topicId] = topic;
-    }
-    for (const topic of Object.values(byTopic))
-      topic.percentage = Number(((topic.correctAnswers / topic.totalQuestions) * 100).toFixed(2));
-    const totalQuestions = this.state.snapshot.questions.length;
-    const percentage = Number(((correctAnswers / totalQuestions) * 100).toFixed(2));
+    const result = AutoCorrect.calculate(this.state.snapshot.questions, this.state.answers);
     return new Attempt({
       ...this.state,
       status,
       submittedAt: new Date(now),
-      result: {
-        score: percentage,
-        correctAnswers,
-        totalQuestions,
-        percentage,
-        topicResults: byTopic,
-      },
+      result,
     });
   }
 }

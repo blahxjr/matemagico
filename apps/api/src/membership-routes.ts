@@ -2,9 +2,16 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { CompositionRoot } from '@matemagico/composition-root';
 import { addLogContext } from '@matemagico/logger';
 import { authenticate } from './authentication-middleware';
+import { authorize } from './authorization-middleware';
 import { sendError } from './errors';
-import { methodNotAllowed, parseParam, readBody, sendJson } from './http';
-import { activateMembershipBody, createMembershipBody, grantRoleBody } from './schemas';
+import { methodNotAllowed, parseParam, readBody, readQuery, sendJson } from './http';
+import {
+  activateMembershipBody,
+  createMembershipBody,
+  grantRoleBody,
+  schoolScopedQuery,
+} from './schemas';
+import { recordAudit } from './audit';
 
 const COLLECTION_PATH = '/memberships';
 const ACTION_PATH = /^\/memberships\/([^/]+)\/(activate|grants)$/;
@@ -19,14 +26,15 @@ export function handleMembershipRoute(
   const action = ACTION_PATH.exec(path);
   if (path !== COLLECTION_PATH && !action) return false;
 
-  if (req.method !== 'POST') {
-    methodNotAllowed(res, 'POST');
+  if (req.method !== 'POST' && !(req.method === 'GET' && path === COLLECTION_PATH)) {
+    methodNotAllowed(res, path === COLLECTION_PATH ? 'GET, POST' : 'POST');
     return true;
   }
 
   const run = async () => {
     // Authentication first: the Actor is the Session's User, never a client-supplied value.
     const actor = await authenticate(root, req);
+    if (req.method === 'GET') return list(root, req, res);
     if (!action) return create(root, req, res, actor.userId);
     const membershipId = parseParam(action[1]);
     if (action[2] === 'activate') return activate(root, req, res, actor.userId, membershipId);
@@ -34,6 +42,12 @@ export function handleMembershipRoute(
   };
   void run().catch((error) => sendError(res, error, 'MEM-005'));
   return true;
+}
+
+async function list(root: CompositionRoot, req: IncomingMessage, res: ServerResponse) {
+  const query = readQuery(req, schoolScopedQuery);
+  await authorize(root, req, { schoolId: query.schoolId, action: 'membership:read' });
+  sendJson(res, 200, await root.services.listSchoolMembers.execute({ schoolId: query.schoolId }));
 }
 
 async function create(
@@ -65,6 +79,14 @@ async function activate(
     actor: { userId: actorUserId },
   });
   addLogContext({ schoolId: output.schoolId });
+  root.permissionCache.invalidateUserSchool(output.userId, output.schoolId);
+  await recordAudit(root, {
+    actorUserId,
+    actorSchoolId: output.schoolId,
+    action: 'membership.activated',
+    targetType: 'SchoolMembership',
+    targetId: output.membershipId,
+  });
   sendJson(res, 200, { result: 'ACTIVATED' });
 }
 
@@ -84,5 +106,14 @@ async function grant(
     actor: { userId: actorUserId },
   });
   addLogContext({ schoolId: output.schoolId });
+  root.permissionCache.invalidateSchool(output.schoolId);
+  await recordAudit(root, {
+    actorUserId,
+    actorSchoolId: output.schoolId,
+    action: 'membership.role.granted',
+    targetType: 'Grant',
+    targetId: output.grantId,
+    metadata: { roleId: body.roleId },
+  });
   sendJson(res, 201, { grantId: output.grantId });
 }

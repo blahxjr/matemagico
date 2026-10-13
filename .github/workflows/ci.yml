@@ -80,3 +80,24 @@ jobs:
       - run: npm run test
       - run: npm run build
       - run: npm run test:architecture
+      - name: Restore smoke-test seed data
+        run: npm run seed
+        env:
+          SEED_DEMO: 'true'
+          SEED_ADMIN_EMAIL: smoke-admin@matemagico.local
+          SEED_ADMIN_PASSWORD: smoke-ci-${{ github.run_id }}-Password9
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run browser E2E tests
+        run: npm run test:e2e
+      - name: Run OpenAPI generation and verify synchronization
+        run: |
+          npm run openapi --workspace @matemagico/api
+          git diff --exit-code -- docs/api/openapi.json
+      - name: Run staging API smoke test
+        run: npm run smoke-test
+        env:
+          SMOKE_START_SERVER: 'true'
+          SMOKE_BASE_URL: http://127.0.0.1:3333
+          SMOKE_EMAIL: smoke-admin@matemagico.local
+          SMOKE_PASSWORD: smoke-ci-${{ github.run_id }}-Password9

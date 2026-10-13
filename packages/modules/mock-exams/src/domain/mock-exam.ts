@@ -161,6 +161,49 @@ export class MockExam {
     );
   }
 
+  /** Metadata edit; only a DRAFT is mutable, a published exam is immutable. */
+  updateDetails(
+    input: {
+      title?: string;
+      description?: string | null;
+      durationMinutes?: number;
+      availableFrom?: Date | null;
+      availableUntil?: Date | null;
+    },
+    now: Date,
+  ): MockExam {
+    if (this.status !== 'DRAFT') throw new MockExamsError('EXM-003');
+    const next = {
+      examId: this.examId,
+      title: input.title ?? this.title,
+      description: input.description === undefined ? this.description : input.description,
+      schoolId: this.schoolId,
+      level: this.level,
+      durationMinutes: input.durationMinutes ?? this.durationMinutes,
+      availableFrom: input.availableFrom === undefined ? this.availableFrom : input.availableFrom,
+      availableUntil:
+        input.availableUntil === undefined ? this.availableUntil : input.availableUntil,
+      questions: this.questions,
+      now,
+    };
+    validate(next);
+    return new MockExam(
+      this.examId,
+      next.title.trim(),
+      next.description?.trim() || null,
+      this.schoolId,
+      this.level,
+      this.status,
+      next.durationMinutes,
+      next.availableFrom,
+      next.availableUntil,
+      this.questions,
+      this.createdAt,
+      new Date(now),
+      this.publishedAt,
+    );
+  }
+
   archive(now: Date): MockExam {
     if (this.status !== 'PUBLISHED') throw new MockExamsError('EXM-003');
     return new MockExam(

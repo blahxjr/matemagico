@@ -20,6 +20,7 @@
     "test:contract": "npm run test:contract --workspace @matemagico/events",
     "test:coverage": "turbo run test:coverage",
     "test:e2e": "playwright test --config=apps/web/playwright.config.ts",
+    "smoke-test": "node scripts/smoke-test.mjs",
     "test:architecture": "dependency-cruiser --validate .dependency-cruiser.js apps packages",
     "db:generate": "npm run db:generate --workspace @matemagico/database",
     "db:validate": "npm run db:validate --workspace @matemagico/database",
